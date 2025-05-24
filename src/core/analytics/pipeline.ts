@@ -1,4 +1,4 @@
-import type { PullRequest, Review, StorageInterface } from '../storage/index.js';
+import type { StorageInterface } from '../storage/index.js';
 import {
   generateContributorSummary,
   generateReviewSummary,

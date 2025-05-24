@@ -1,5 +1,5 @@
 import type { PullRequest, Review } from '../storage/index.js';
-import { parseTimeframe, filterPRs, formatMergeTime } from './contributor_metrics.js';
+import { filterPRs, formatMergeTime } from './contributor_metrics.js';
 import type { ContributorMetricsOptions } from './contributor_metrics.js';
 
 export interface ReviewMetrics {
