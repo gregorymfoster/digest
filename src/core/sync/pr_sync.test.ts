@@ -43,6 +43,7 @@ describe('PRSyncService', () => {
       title: 'Add new feature',
       user: { login: 'johndoe' },
       created_at: '2024-01-01T10:00:00Z',
+      updated_at: '2024-01-01T11:30:00Z',
       merged_at: '2024-01-01T12:00:00Z',
       state: 'closed',
       additions: 100,

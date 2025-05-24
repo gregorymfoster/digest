@@ -1,6 +1,7 @@
 import type { Octokit } from '@octokit/rest';
 import type { PullRequest, Review, StorageInterface } from '../storage/index.js';
 import type { RawPR, RawReview, RawPRFile, SyncProgress } from '../../types/index.js';
+import { IncrementalSyncManager } from './incremental_sync.js';
 
 export interface PRSyncOptions {
   repository: string;
@@ -19,10 +20,14 @@ export interface PRSyncResult {
 }
 
 export class PRSyncService {
+  private incrementalSyncManager: IncrementalSyncManager;
+
   constructor(
     private octokit: Octokit,
     private storage: StorageInterface
-  ) {}
+  ) {
+    this.incrementalSyncManager = new IncrementalSyncManager(storage);
+  }
 
   async syncRepository(options: PRSyncOptions): Promise<PRSyncResult> {
     const { repository, since, force, onProgress } = options;
@@ -39,8 +44,8 @@ export class PRSyncService {
     };
 
     try {
-      // Determine sync starting point
-      const syncSince = this.determineSyncPoint(repository, since, force);
+      // Get current sync state and determine what needs to be synced
+      const syncStats = this.incrementalSyncManager.getSyncStats(repository);
       
       onProgress?.({
         phase: 'fetching',
@@ -49,58 +54,51 @@ export class PRSyncService {
         errors: []
       });
 
-      // Fetch all PRs (closed and merged)
-      const allPRs = await this.fetchAllPRs(owner, repo, syncSince, onProgress);
-      result.totalPRs = allPRs.length;
+      console.log(`📊 Incremental sync for ${repository}:`);
+      console.log(`  Last synced PR: #${syncStats.lastSyncedPRNumber}`);
+      console.log(`  Total PRs in DB: ${syncStats.totalPRs}`);
+      console.log(`  ${syncStats.isFirstSync ? 'First sync' : 'Incremental sync'}`);
 
-      onProgress?.({
-        phase: 'processing',
-        totalPRs: allPRs.length,
-        processedPRs: 0,
-        errors: []
-      });
+      // Fetch and process PRs incrementally with immediate storage
+      const { newPRs, updatedPRs } = await this.fetchPRsIncremental(
+        owner, 
+        repo, 
+        repository,
+        since,
+        force,
+        onProgress,
+        result
+      );
+      
+      result.totalPRs = newPRs.length + updatedPRs.length;
+      result.newPRs = newPRs.length;
+      result.updatedPRs = updatedPRs.length;
 
-      // Process each PR
-      const processingStartTime = Date.now();
-      for (let i = 0; i < allPRs.length; i++) {
-        const rawPR = allPRs[i];
-        
-        try {
-          await this.processPR(owner, repo, rawPR, result);
-          
-          // Calculate processing time estimates
-          const processingTimeElapsed = Date.now() - processingStartTime;
-          const processedSoFar = i + 1;
-          const estimatedProcessingTime = processedSoFar > 0 
-            ? (processingTimeElapsed / processedSoFar) * (allPRs.length - processedSoFar)
-            : undefined;
-          
-          onProgress?.({
-            phase: 'processing',
-            totalPRs: allPRs.length,
-            processedPRs: processedSoFar,
-            currentPR: rawPR.number,
-            errors: result.errors,
-            timeElapsed: processingTimeElapsed,
-            estimatedTimeRemaining: estimatedProcessingTime
-          });
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          result.errors.push({ pr: rawPR.number, error: errorMsg });
-        }
+      if (result.totalPRs === 0) {
+        console.log(`✅ No new or updated PRs found for ${repository}`);
+        onProgress?.({
+          phase: 'complete',
+          totalPRs: 0,
+          processedPRs: 0,
+          errors: [],
+          timeElapsed: Date.now() - syncStartTime
+        });
+        return result;
       }
+
+      console.log(`✅ Completed incremental sync: ${newPRs.length} new PRs, ${updatedPRs.length} updated PRs`);
 
       onProgress?.({
         phase: 'storing',
-        totalPRs: allPRs.length,
-        processedPRs: allPRs.length,
+        totalPRs: result.totalPRs,
+        processedPRs: result.totalPRs,
         errors: result.errors
       });
 
       onProgress?.({
         phase: 'complete',
-        totalPRs: allPRs.length,
-        processedPRs: allPRs.length,
+        totalPRs: result.totalPRs,
+        processedPRs: result.totalPRs,
         errors: result.errors,
         timeElapsed: Date.now() - syncStartTime
       });
@@ -108,6 +106,7 @@ export class PRSyncService {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       result.errors.push({ pr: 0, error: `Sync failed: ${errorMsg}` });
+      console.error(`❌ Sync failed for ${repository}: ${errorMsg}`);
     }
 
     return result;
@@ -145,57 +144,249 @@ export class PRSyncService {
     return since;
   }
 
-  private async fetchAllPRs(
+  private async fetchPRsIncremental(
     owner: string, 
     repo: string, 
+    repository: string,
     since?: string,
-    onProgress?: (progress: SyncProgress) => void
-  ): Promise<RawPR[]> {
-    const allPRs: RawPR[] = [];
+    force?: boolean,
+    onProgress?: (progress: SyncProgress) => void,
+    result?: PRSyncResult
+  ): Promise<{ newPRs: RawPR[], updatedPRs: RawPR[] }> {
+    const startTime = Date.now();
+    const newPRs: RawPR[] = [];
+    const updatedPRs: RawPR[] = [];
+    
+    let lastSyncedPRNumber: number;
+    let lastSyncTime: string | null;
+    
+    if (force) {
+      // Force mode: ignore incremental sync state
+      lastSyncedPRNumber = 0;
+      lastSyncTime = since || null;
+      console.log(`[${repository}] Force sync mode - using provided since: ${since || 'all time'}`);
+    } else {
+      // Normal incremental mode
+      lastSyncedPRNumber = this.incrementalSyncManager.getLastSyncedPRNumber(repository);
+      lastSyncTime = this.incrementalSyncManager.getLastSyncTime(repository);
+      console.log(`[${repository}] Last synced PR number: ${lastSyncedPRNumber}`);
+    }
+
+    // Fetch and process PRs incrementally with immediate storage
+    await this.fetchAndProcessIncremental(
+      owner, 
+      repo, 
+      repository, 
+      lastSyncedPRNumber, 
+      lastSyncTime, 
+      force, 
+      newPRs, 
+      updatedPRs, 
+      onProgress, 
+      startTime,
+      result
+    );
+
+    console.log(`[${repository}] Categorized: ${newPRs.length} new PRs, ${updatedPRs.length} updated PRs`);
+    return { newPRs, updatedPRs };
+  }
+
+  private async fetchAndProcessIncremental(
+    owner: string, 
+    repo: string, 
+    repository: string,
+    lastSyncedPRNumber: number,
+    lastSyncTime: string | null,
+    force: boolean | undefined,
+    newPRs: RawPR[],
+    updatedPRs: RawPR[],
+    onProgress?: (progress: SyncProgress) => void,
+    startTime?: number,
+    result?: PRSyncResult
+  ): Promise<void> {
     let page = 1;
     const perPage = 100;
-    const startTime = Date.now();
+    let totalProcessed = 0;
+
+    console.log(`[${repository}] Fetching and processing PRs incrementally (last synced: #${lastSyncedPRNumber})`);
 
     while (true) {
       const params: any = {
         owner,
         repo,
-        state: 'all', // Include both open and closed PRs
-        sort: 'updated',
-        direction: 'desc',
+        state: 'all' as const,
+        sort: 'updated' as const,
+        direction: 'desc' as const,
         per_page: perPage,
         page
       };
 
-      if (since) {
-        params.since = since;
+      // If we have a last sync time, use it to filter
+      if (lastSyncTime) {
+        params.since = lastSyncTime;
       }
 
       const response = await this.octokit.rest.pulls.list(params);
       const prs = response.data as unknown as RawPR[];
       
-      // Get rate limit info from response headers
       const rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || '0');
       const rateLimitResetAt = response.headers['x-ratelimit-reset'] 
         ? new Date(parseInt(response.headers['x-ratelimit-reset']) * 1000).toISOString()
         : undefined;
 
       if (prs.length === 0) {
-        break; // No more PRs
+        break;
       }
 
-      allPRs.push(...prs);
+      console.log(`[${repository}] Page ${page}: Fetched ${prs.length} PRs, processing immediately...`);
+
+      // Process each PR immediately as we fetch it
+      for (const pr of prs) {
+        if (force) {
+          // In force mode, treat all PRs as new and process them
+          newPRs.push(pr);
+          try {
+            await this.processPR(owner, repo, pr, result || { 
+              totalPRs: 0, newPRs: 0, updatedPRs: 0, newReviews: 0, 
+              errors: [], lastSyncAt: new Date().toISOString() 
+            });
+            totalProcessed++;
+            console.log(`[${repository}] ✅ Processed PR #${pr.number} (${totalProcessed} total)`);
+          } catch (error) {
+            console.error(`[${repository}] ❌ Error processing PR #${pr.number}: ${error}`);
+          }
+        } else {
+          // Normal incremental categorization and processing
+          const decision = this.incrementalSyncManager.shouldProcessPR(
+            repository,
+            pr.number,
+            pr.state,
+            pr.updated_at || pr.created_at
+          );
+          
+          if (decision.shouldProcess) {
+            if (decision.reason === 'new-pr') {
+              newPRs.push(pr);
+            } else if (decision.reason === 'updated-open-pr') {
+              updatedPRs.push(pr);
+            }
+            
+            try {
+              await this.processPR(owner, repo, pr, result || { 
+                totalPRs: 0, newPRs: 0, updatedPRs: 0, newReviews: 0, 
+                errors: [], lastSyncAt: new Date().toISOString() 
+              });
+              totalProcessed++;
+              console.log(`[${repository}] ✅ Processed PR #${pr.number} (${decision.reason}) - ${totalProcessed} total`);
+            } catch (error) {
+              console.error(`[${repository}] ❌ Error processing PR #${pr.number}: ${error}`);
+            }
+          } else {
+            console.log(`[${repository}] ⏭️  Skipping PR #${pr.number} (${decision.reason})`);
+          }
+        }
+      }
 
       // Calculate time estimates
-      const timeElapsed = Date.now() - startTime;
+      const timeElapsed = startTime ? Date.now() - startTime : 0;
       let estimatedTimeRemaining: number | undefined;
       let estimatedTotalPages: number | undefined;
 
       // Estimate total pages and time remaining
       if (page > 1 && prs.length === perPage) {
-        // If we're getting full pages, estimate based on current rate
         const avgTimePerPage = timeElapsed / page;
-        // Conservative estimate: assume at least 2x more pages
+        estimatedTotalPages = Math.max(page * 2, page + 5);
+        estimatedTimeRemaining = avgTimePerPage * (estimatedTotalPages - page);
+      }
+
+      // Send progress update
+      onProgress?.({
+        phase: 'processing', // Changed from 'fetching' since we're processing immediately
+        totalPRs: totalProcessed,
+        processedPRs: totalProcessed,
+        errors: [],
+        fetchProgress: {
+          currentPage: page,
+          estimatedTotalPages,
+          prsThisPage: prs.length,
+          rateLimitRemaining,
+          rateLimitResetAt
+        },
+        timeElapsed,
+        estimatedTimeRemaining
+      });
+
+      // If we got fewer than perPage, we're done
+      if (prs.length < perPage) {
+        break;
+      }
+
+      page++;
+
+      // Add small delay to be nice to GitHub API
+      if (rateLimitRemaining < 100) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    console.log(`[${repository}] ✅ Fetch and process complete: ${totalProcessed} PRs processed`);
+  }
+
+  private async fetchAllRelevantPRs(
+    owner: string, 
+    repo: string, 
+    repository: string,
+    lastSyncedPRNumber: number,
+    lastSyncTime: string | null,
+    force: boolean | undefined,
+    allPRs: RawPR[],
+    onProgress?: (progress: SyncProgress) => void,
+    startTime?: number
+  ): Promise<void> {
+    let page = 1;
+    const perPage = 100;
+
+    console.log(`[${repository}] Fetching all PRs for incremental sync (last synced: #${lastSyncedPRNumber})`);
+
+    while (true) {
+      const params: any = {
+        owner,
+        repo,
+        state: 'all' as const,
+        sort: 'updated' as const, // Sort by updated to get both new and recently updated PRs
+        direction: 'desc' as const,
+        per_page: perPage,
+        page
+      };
+
+      // If we have a last sync time, use it to filter
+      if (lastSyncTime) {
+        params.since = lastSyncTime;
+      }
+
+      const response = await this.octokit.rest.pulls.list(params);
+      const prs = response.data as unknown as RawPR[];
+      
+      const rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || '0');
+      const rateLimitResetAt = response.headers['x-ratelimit-reset'] 
+        ? new Date(parseInt(response.headers['x-ratelimit-reset']) * 1000).toISOString()
+        : undefined;
+
+      if (prs.length === 0) {
+        break;
+      }
+
+      allPRs.push(...prs);
+      console.log(`[${repository}] Page ${page}: Fetched ${prs.length} PRs`);
+
+      // Calculate time estimates
+      const timeElapsed = startTime ? Date.now() - startTime : 0;
+      let estimatedTimeRemaining: number | undefined;
+      let estimatedTotalPages: number | undefined;
+
+      // Estimate total pages and time remaining
+      if (page > 1 && prs.length === perPage) {
+        const avgTimePerPage = timeElapsed / page;
         estimatedTotalPages = Math.max(page * 2, page + 5);
         estimatedTimeRemaining = avgTimePerPage * (estimatedTotalPages - page);
       }
@@ -229,20 +420,12 @@ export class PRSyncService {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-
-    return allPRs;
   }
+
 
   private async processPR(owner: string, repo: string, rawPR: RawPR, result: PRSyncResult): Promise<void> {
     const repository = `${owner}/${repo}`;
     
-    // Check if PR already exists
-    const existingPRs = this.storage.getPRs({ 
-      repository,
-      author: rawPR.user?.login || 'unknown' 
-    }).filter(pr => pr.number === rawPR.number);
-    
-    const isUpdate = existingPRs.length > 0;
 
     // Get PR files for test detection
     const files = await this.fetchPRFiles(owner, repo, rawPR.number);
@@ -265,12 +448,6 @@ export class PRSyncService {
 
     // Store PR
     this.storage.addPR(prRecord);
-    
-    if (isUpdate) {
-      result.updatedPRs++;
-    } else {
-      result.newPRs++;
-    }
 
     // Fetch and process reviews
     const reviews = await this.fetchPRReviews(owner, repo, rawPR.number);

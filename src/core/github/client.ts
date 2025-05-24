@@ -168,6 +168,7 @@ function transformPR(pr: any): RawPR {
     title: pr.title,
     user: pr.user,
     created_at: pr.created_at,
+    updated_at: pr.updated_at,
     merged_at: pr.merged_at,
     state: pr.state,
     additions: pr.additions || 0,

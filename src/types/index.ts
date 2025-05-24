@@ -48,6 +48,17 @@ export type SyncState = {
   lastPRUpdated: string; // Latest PR updated_at from last sync
   totalPRsSynced: number; // Running count for progress tracking
   errors: SyncError[]; // Track sync issues
+  // Enhanced incremental sync tracking
+  syncProgress?: {
+    phase: 'fetching' | 'processing' | 'complete' | 'interrupted';
+    lastProcessedPage?: number; // For fetching resumption
+    lastProcessedPR?: number; // For processing resumption
+    totalPRsFound?: number; // Total PRs discovered in this sync
+    syncedPRIds: number[]; // PRs already processed in this sync session
+    skippedPRIds: number[]; // PRs skipped (closed/merged, no changes)
+    startedAt: string; // When this sync session started
+    lastCheckpointAt?: string; // Last time we saved progress
+  };
 };
 
 export type PRRecord = {
@@ -87,6 +98,7 @@ export type RawPR = {
   title: string;
   user: { login: string } | null;
   created_at: string;
+  updated_at: string;
   merged_at: string | null;
   state: 'open' | 'closed';
   additions: number;
