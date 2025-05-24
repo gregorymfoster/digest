@@ -48,5 +48,11 @@ See [STYLE_GUIDE.md](./STYLE_GUIDE.md) for development standards and [CONTRIBUTI
 ```bash
 npm run dev        # Run CLI locally
 npm run test       # Run tests
-npm run ci         # Full quality pipeline
+npm run ci         # Full quality pipeline (lint + typecheck + test + build)
 ```
+
+### Git Hooks
+
+This project uses husky for git hooks to ensure code quality:
+- **pre-commit**: Runs full CI pipeline (lint, typecheck, test, build)
+- **commit-msg**: Validates commit message format
