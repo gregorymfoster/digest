@@ -1,0 +1,63 @@
+{
+  "name": "@graphite/digest",
+  "version": "0.1.0",
+  "description": "Management insights dashboard for software development teams via GitHub PR analysis",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "digest": "./dist/index.cjs"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx src/cli/index.ts",
+    "dev:watch": "tsx watch src/cli/index.ts",
+    "build": "tsup",
+    "postbuild": "chmod +x dist/index.cjs",
+    "clean": "rm -rf dist",
+    "lint": "oxlint src",
+    "format": "prettier --write 'src/**/*.ts'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "ci": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "github",
+    "pr",
+    "analytics",
+    "management",
+    "team",
+    "insights",
+    "productivity",
+    "cli"
+  ],
+  "author": "Greg @ Graphite",
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/rest": "^20.0.2",
+    "chalk": "^5.3.0",
+    "commander": "^14.0.0",
+    "execa": "^8.0.1",
+    "ora": "^7.0.1",
+    "p-limit": "^4.0.0",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "husky": "^9.1.7",
+    "oxlint": "^0.16.11",
+    "prettier": "^3.1.1",
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

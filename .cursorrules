@@ -1,0 +1,299 @@
+# digest - Management Insights for Software Teams
+
+## Project Overview
+A TypeScript CLI tool that provides management insights for software development teams by analyzing GitHub PR data.
+
+### Core Functionality
+1. Multi-repository GitHub data sync with organization support
+2. Advanced analytics and metrics computation for teams, developers, and codebase areas
+3. Quality scoring algorithms and collaboration analysis
+4. Management dashboards and reports via CLI interface
+5. SQLite-based analytics database optimized for insights queries
+
+## Architecture & Design Principles
+
+### Project Structure 
+```
+src/
+├── cli/              # Commands (init, sync, team, contributors, etc.)
+├── core/             # Main business logic
+│   ├── analytics/    # Metrics calculation engine
+│   ├── database/     # Data models and queries  
+│   ├── github/       # GitHub API integration
+│   └── insights/     # Report generation
+├── types/            # TypeScript definitions
+└── adapters/         # External integrations
+```
+
+### Key Technologies
+- **Analytics Engine**: Custom metrics computation with quality scoring
+- **Database**: better-sqlite3 with analytics-optimized schema
+- **GitHub Integration**: GitHub CLI (`gh`) with multi-repo support  
+- **AI Integration**: Vercel AI SDK (optional for insights enhancement)
+- **CLI**: commander.js with management-focused commands
+- **Validation**: Zod for configuration validation
+- **Build**: tsup + tsx for development
+- **Testing**: vitest with comprehensive test strategy
+
+## Code Style Guidelines
+
+**See `STYLE_GUIDE.md` for complete development standards.**
+
+Key principles for digest:
+- Functional programming with colocated tests
+- Analytics-focused data models and computation
+- Management insights over technical complexity
+- Single repository mastery before multi-repo expansion
+
+## Configuration Management
+
+### Default Configuration Structure
+```typescript
+type DigestConfig = {
+  github?: {
+    repos?: string[]; // Support multiple repos for org-wide insights
+    org?: string; // Organization name for auto-discovery
+    throttleRpm?: number; // Default 100
+  };
+  ai?: {
+    provider?: 'ollama' | 'anthropic';
+    model?: string;
+    apiKey?: string; // For Anthropic
+    endpoint?: string; // For Ollama, default 'http://localhost:11434'
+    maxTokens?: number; // Default 1000 (higher for analytics)
+  };
+  analytics?: {
+    timeframes?: string[]; // ['weekly', 'monthly', 'quarterly']
+    teamDefinitions?: Record<string, string[]>; // team -> [members]
+    areaPatterns?: Record<string, string[]>; // area -> [glob patterns]
+    qualityWeights?: {
+      testCoverage?: number;
+      documentation?: number;
+      reviewThoroughness?: number;
+      reworkRate?: number;
+    };
+  };
+  concurrency?: number; // Default 10
+  outputDir?: string; // Default './digest' (contains analytics.db + reports/)
+  cacheDir?: string; // Default '~/.digest-cache'
+  dataRetentionMonths?: number; // Default 24 - longer for trend analysis
+};
+```
+
+## Data Models
+
+### Enhanced SQLite Schema for Analytics
+```sql
+-- Core PR data with analytics focus
+CREATE TABLE prs (
+  number INTEGER PRIMARY KEY,
+  repository TEXT NOT NULL,
+  title TEXT,
+  author TEXT NOT NULL,
+  created_at TEXT,
+  merged_at TEXT,
+  additions INTEGER DEFAULT 0,
+  deletions INTEGER DEFAULT 0,
+  changed_files INTEGER DEFAULT 0,
+  review_cycles INTEGER DEFAULT 0,
+  has_tests BOOLEAN DEFAULT FALSE,
+  has_docs BOOLEAN DEFAULT FALSE,
+  synced_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Developer metrics (computed)
+CREATE TABLE developer_metrics (
+  developer TEXT NOT NULL,
+  repository TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  prs_authored INTEGER DEFAULT 0,
+  quality_score REAL DEFAULT 0,
+  productivity_score REAL DEFAULT 0,
+  collaboration_score REAL DEFAULT 0,
+  computed_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- File changes for area analysis
+CREATE TABLE file_changes (
+  pr_number INTEGER NOT NULL,
+  repository TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  additions INTEGER DEFAULT 0,
+  deletions INTEGER DEFAULT 0,
+  area TEXT, -- computed: frontend, backend, etc.
+  complexity_score REAL
+);
+```
+
+## Analytics Architecture
+
+### Core Analytics Components
+1. **Metrics Engine**: Computes developer, team, and area metrics
+2. **Quality Scoring**: Multi-factor quality assessment algorithms  
+3. **Collaboration Analysis**: Review patterns and knowledge sharing
+4. **Trend Detection**: Performance and quality trends over time
+5. **Report Generation**: Management dashboards and insights
+
+### Management-Focused Outputs
+- **Team Performance Dashboards**: Velocity, quality, collaboration metrics
+- **Individual Developer Profiles**: Contributions, growth, expertise areas
+- **Codebase Area Analysis**: Ownership, risk assessment, activity levels
+- **Knowledge Gap Detection**: Bus factor analysis and recommendations
+
+## Implementation Guidelines
+
+### Analytics Pipeline
+```typescript
+// Metrics computation pipeline
+const computeAnalytics = async (context: ProcessingContext) => {
+  const metrics = await computeDeveloperMetrics(context);
+  const teamMetrics = await computeTeamMetrics(context, metrics);
+  const areaMetrics = await computeAreaMetrics(context);
+  const insights = await generateInsights(metrics, teamMetrics, areaMetrics);
+  
+  return { metrics, teamMetrics, areaMetrics, insights };
+};
+```
+
+### Multi-Repository Support
+```typescript
+// Organization-wide analytics
+const syncOrganization = async (config: DigestConfig) => {
+  const repos = await discoverRepositories(config.github.org);
+  
+  for (const repo of repos) {
+    await syncRepository(repo, config);
+    await computeRepositoryMetrics(repo);
+  }
+  
+  await computeOrganizationMetrics(repos);
+};
+```
+
+### Quality Scoring Algorithm
+```typescript
+const computeQualityScore = (pr: PRRecord): QualityScore => {
+  const weights = config.analytics.qualityWeights;
+  
+  return {
+    overall: (
+      (pr.has_tests ? 100 : 0) * weights.testCoverage +
+      (pr.has_docs ? 100 : 0) * weights.documentation +
+      computeReviewThoroughness(pr) * weights.reviewThoroughness +
+      (100 - pr.review_cycles * 20) * weights.reworkRate
+    ) / Object.values(weights).reduce((a, b) => a + b, 0),
+    
+    breakdown: {
+      testCoverage: pr.has_tests ? 100 : 0,
+      documentation: pr.has_docs ? 100 : 0,
+      reviewThoroughness: computeReviewThoroughness(pr),
+      reworkRate: Math.max(0, 100 - pr.review_cycles * 20)
+    }
+  };
+};
+```
+
+## Testing Approach
+
+### Testing Strategy for Analytics
+- **Unit tests**: Metrics calculation algorithms with known inputs
+- **Integration tests**: Database operations and multi-repo sync
+- **Analytics tests**: Verify insights accuracy with synthetic data
+- **Performance tests**: Large dataset handling and query optimization
+
+### Test Organization
+- Tests live next to source files (`file.ts` + `file.test.ts`)
+- Use vitest for fast test execution
+- Mock GitHub API calls for consistent testing
+- Use temporary databases for integration tests
+
+## Development Workflow
+
+**See `STYLE_GUIDE.md` for complete development setup.**
+
+Digest-specific testing commands:
+```bash
+npm run dev sync owner/repo        # Test repository sync
+npm run dev contributors           # Test contributor analytics  
+npm run dev reviews               # Test review analysis
+npm run dev export --csv          # Test data export
+```
+
+## Error Handling Strategy
+
+### Pre-flight Checks
+- Ensure `gh` CLI installed and authenticated
+- Verify organization/repository access permissions
+- Validate configuration schema with helpful error messages
+- Check database schema version and migrate if needed
+
+### Runtime Error Handling
+- Graceful degradation on API failures
+- Resumable sync operations with progress tracking
+- Comprehensive logging for debugging analytics issues
+- Idempotent operations - safe to restart anytime
+
+## Security Considerations for Management Data
+
+- **Privacy Controls**: Configurable developer name anonymization
+- **Data Retention**: Automatic cleanup of old analytics data
+- **Access Controls**: Repository-based permissions only
+- **No External Services**: All processing happens locally
+
+## Performance Considerations
+
+- **Efficient Queries**: Optimized SQLite indexes for analytics workloads
+- **Incremental Sync**: Only process new PRs since last run
+- **Parallel Processing**: Bounded concurrency for multi-repo operations
+- **Caching Strategy**: Smart caching to avoid re-computation
+
+## Future Extensibility
+
+### Phase 2+ Features
+- **Predictive Analytics**: Team capacity planning and delivery forecasting
+- **Integration APIs**: Export to external BI tools and dashboards
+- **Custom Metrics**: User-defined analytics and scoring algorithms
+- **Real-time Alerts**: Slack/email notifications for quality/productivity issues
+
+### Design for Extension
+- Modular analytics engine supports custom metrics
+- Plugin architecture for new data sources
+- Configurable export formats and destinations
+- Extensible quality scoring framework
+
+## Dependencies Management
+
+### Core Dependencies
+- `better-sqlite3` for analytics database
+- `commander` for management-focused CLI
+- `zod` for configuration validation
+- `execa` for GitHub CLI integration
+- `p-limit` for concurrency control
+- `chalk` for rich CLI output
+
+### Optional Dependencies
+- `ai`, `@ai-sdk/anthropic` for AI-enhanced insights
+- `ollama-ai-provider` for local LLM analysis
+
+Keep dependencies focused on analytics and management use cases.
+
+## Current Development Focus
+
+### Active Phase: Foundation & Analytics Setup
+**Current Goal:** Establish analytics-focused architecture and data models
+
+**Key Priorities:**
+1. **Multi-repository sync** with organization discovery
+2. **Analytics database schema** optimized for insights queries  
+3. **Metrics computation engine** for developer, team, and area analytics
+4. **Quality scoring algorithms** based on PR characteristics
+5. **Management CLI interface** with dashboard-style commands
+
+### Development Principles
+- **Management-first design**: Every feature should provide actionable insights
+- **Scalable analytics**: Support for large organizations with many repositories
+- **Privacy-aware**: Configurable anonymization and data retention
+- **Actionable insights**: Focus on helping managers make better decisions
+
+When implementing, always consider the management use case and ensure features provide clear value for engineering leadership and team optimization.
