@@ -1,0 +1,189 @@
+# Getting Started
+
+Get up and running with Digest in minutes to start analyzing your development team's GitHub activity.
+
+## Prerequisites
+
+- **Node.js 18+**: Digest requires Node.js version 18 or higher
+- **GitHub Access**: Personal access token or GitHub CLI authentication
+- **Repository Access**: Read access to the repositories you want to analyze
+
+## Installation
+
+### Option 1: npm (Recommended)
+
+```bash
+npm install -g @graphite/digest
+```
+
+### Option 2: Build from Source
+
+```bash
+git clone https://github.com/gregorymfoster/digest.git
+cd digest
+npm install
+npm run build
+npm link
+```
+
+## Initial Setup
+
+### 1. Initialize Workspace
+
+Create a new digest workspace in your project directory:
+
+```bash
+digest init
+```
+
+This will:
+- Create a `.digest/` directory for configuration and data
+- Prompt for your GitHub token (if not already authenticated)
+- Set up the local SQLite database
+
+### 2. GitHub Authentication
+
+Digest needs access to GitHub to fetch PR and review data. You have two options:
+
+#### Option A: Provide Token During Init
+```bash
+digest init --token ghp_your_token_here
+```
+
+#### Option B: Use GitHub CLI (if installed)
+```bash
+gh auth login
+digest init
+```
+
+### 3. Add Repositories
+
+Add the repositories you want to track:
+
+```bash
+# Add a single repository
+digest add owner/repo
+
+# Add with specific start date
+digest add owner/repo --since 2024-01-01
+
+# Add with relative timeframe
+digest add owner/repo --since 90d
+```
+
+### 4. Initial Data Sync
+
+Fetch PR and review data from your repositories:
+
+```bash
+# Sync all tracked repositories
+digest sync
+
+# Sync a specific repository
+digest sync owner/repo
+
+# Force a complete re-sync
+digest sync --force
+```
+
+## Verify Installation
+
+Check that everything is working correctly:
+
+```bash
+# View workspace status
+digest status
+
+# List tracked repositories
+digest list
+
+# View recent contributors
+digest contributors --limit 5
+```
+
+You should see output similar to:
+
+```
+📊 Top Contributors (Last 30 days)
+
+Rank  Author           PRs    Lines     Avg Merge Time
+───────────────────────────────────────────────────────
+ 1    alice-dev         12    +2.1K     1.2 days      
+ 2    bob-engineer       8    +1.5K     0.8 days      
+ 3    charlie-ops        5    +890      2.1 days      
+
+Total: 3 contributors, 25 PRs
+Lines: 4.5K total, 180 avg per PR
+Tests: 92% of PRs include tests
+```
+
+## Quick Tour
+
+### View Analytics
+
+```bash
+# Contributor insights for last 30 days
+digest contributors --timeframe 30d
+
+# Review analytics with timing
+digest reviews --timeframe 30d
+
+# Focus on a specific repository
+digest contributors --repository owner/repo
+
+# Focus on a specific reviewer
+digest reviews --reviewer alice-dev
+```
+
+### Export Data
+
+```bash
+# Export to CSV for spreadsheet analysis
+digest export --format csv --timeframe 90d
+
+# Export to JSON for programmatic use
+digest export --format json --output analytics.json
+
+# Export specific repository data
+digest export --repository owner/repo --timeframe 30d
+```
+
+## Directory Structure
+
+After setup, your workspace will look like:
+
+```
+your-project/
+├── .digest/
+│   ├── config.json      # Workspace configuration
+│   └── digest.db        # SQLite database with PR/review data
+├── your-code...
+└── digest-export-*.csv  # Exported analytics (if using export)
+```
+
+## What's Next?
+
+- **[Commands](/commands)** - Explore all available commands and options
+- **[Analytics](/analytics)** - Learn about the metrics and insights
+- **[Configuration](/configuration)** - Customize digest for your workflow
+- **[Examples](/examples)** - See real-world usage scenarios
+
+## Common Issues
+
+### Permission Errors
+If you see permission errors, ensure your GitHub token has:
+- `repo` scope for private repositories
+- `public_repo` scope for public repositories only
+
+### No Data Found
+If analytics show no data:
+1. Verify repositories are added: `digest list`
+2. Check sync status: `digest status`
+3. Run sync manually: `digest sync`
+4. Ensure PRs exist in the specified timeframe
+
+### Rate Limiting
+GitHub API has rate limits. Digest handles this automatically, but for large repositories:
+- Use `--since` when adding repositories to limit historical data
+- Sync during off-peak hours for better performance
+- Consider GitHub Apps for higher rate limits in organizations

@@ -1,0 +1,455 @@
+# Configuration
+
+Customize digest to fit your team's workflow and requirements.
+
+## Workspace Configuration
+
+The digest workspace is stored in `.digest/config.json` in your project directory.
+
+### Configuration File Structure
+
+```json
+{
+  "version": "0.1.0",
+  "github": {
+    "token": "ghp_encrypted_token_here",
+    "apiUrl": "https://api.github.com"
+  },
+  "database": {
+    "path": "./.digest/digest.db"
+  },
+  "repositories": [
+    {
+      "name": "facebook/react",
+      "active": true,
+      "addedAt": "2024-01-15T10:30:00.000Z",
+      "lastSyncAt": "2024-01-15T15:45:00.000Z",
+      "syncOptions": {
+        "since": "2023-10-01T00:00:00.000Z"
+      },
+      "errors": []
+    }
+  ],
+  "settings": {
+    "defaultTimeframe": "30d",
+    "maxRetries": 3,
+    "rateLimitMargin": 100
+  }
+}
+```
+
+## Repository Configuration
+
+### Adding Repositories with Options
+
+```bash
+# Basic repository addition
+digest add owner/repo
+
+# With specific start date
+digest add owner/repo --since 2024-01-01
+
+# With relative timeframe
+digest add owner/repo --since 90d
+```
+
+### Repository Management
+
+**Manual Configuration Edit:**
+```json
+{
+  "name": "myorg/critical-service",
+  "active": true,
+  "addedAt": "2024-01-15T10:30:00.000Z",
+  "lastSyncAt": "2024-01-15T15:45:00.000Z",
+  "syncOptions": {
+    "since": "2023-10-01T00:00:00.000Z",
+    "includeLabels": ["bug", "feature"],
+    "excludeAuthors": ["dependabot", "renovate"]
+  }
+}
+```
+
+**Repository Status:**
+- `active: true` - Repository is synced during `digest sync`
+- `active: false` - Repository is paused but data is retained
+
+## GitHub Authentication
+
+### Token Configuration
+
+**Required Scopes:**
+- `repo` - Full repository access (for private repos)
+- `public_repo` - Public repository access only
+- `read:org` - Organization membership (optional)
+
+**Token Sources (in priority order):**
+1. `--token` flag during `digest init`
+2. `GITHUB_TOKEN` environment variable
+3. GitHub CLI authentication (`gh auth status`)
+4. Interactive prompt
+
+### GitHub Enterprise
+
+For GitHub Enterprise Server:
+
+```json
+{
+  "github": {
+    "token": "ghp_your_token",
+    "apiUrl": "https://github.company.com/api/v3"
+  }
+}
+```
+
+## Database Configuration
+
+### SQLite Settings
+
+```json
+{
+  "database": {
+    "path": "./.digest/digest.db",
+    "pragma": {
+      "journal_mode": "WAL",
+      "synchronous": "NORMAL",
+      "cache_size": -64000
+    }
+  }
+}
+```
+
+### Database Location
+
+**Default Location:** `.digest/digest.db`
+
+**Custom Location:**
+```json
+{
+  "database": {
+    "path": "/shared/team-metrics/digest.db"
+  }
+}
+```
+
+## Sync Configuration
+
+### Default Settings
+
+```json
+{
+  "settings": {
+    "defaultTimeframe": "30d",
+    "maxRetries": 3,
+    "rateLimitMargin": 100,
+    "batchSize": 100,
+    "concurrentRequests": 5
+  }
+}
+```
+
+### Per-Repository Sync Options
+
+```json
+{
+  "name": "large-org/huge-repo",
+  "syncOptions": {
+    "since": "2024-01-01T00:00:00.000Z",
+    "includeLabels": ["priority", "bug"],
+    "excludeLabels": ["duplicate", "invalid"],
+    "excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
+    "includePaths": ["src/", "tests/"],
+    "excludePaths": ["docs/", "examples/"]
+  }
+}
+```
+
+**Sync Options:**
+- `since` - Only sync PRs created after this date
+- `includeLabels` - Only sync PRs with these labels
+- `excludeLabels` - Skip PRs with these labels  
+- `excludeAuthors` - Skip PRs from these authors
+- `includePaths` - Only consider changes in these paths
+- `excludePaths` - Ignore changes in these paths
+
+## Analytics Configuration
+
+### Default Metrics
+
+```json
+{
+  "analytics": {
+    "contributorMetrics": {
+      "defaultLimit": 10,
+      "includeTests": true,
+      "testPatterns": [
+        "**/*test*",
+        "**/*spec*", 
+        "**/tests/**",
+        "**/test/**"
+      ]
+    },
+    "reviewMetrics": {
+      "includeComments": true,
+      "minReviewTime": 300,
+      "maxReviewTime": 86400000
+    }
+  }
+}
+```
+
+### Test Detection
+
+**Default Test Patterns:**
+- Files matching `*test*` or `*spec*`
+- Files in `tests/` or `test/` directories
+- Common test frameworks (Jest, Mocha, RSpec, etc.)
+
+**Custom Test Patterns:**
+```json
+{
+  "analytics": {
+    "contributorMetrics": {
+      "testPatterns": [
+        "**/*.test.ts",
+        "**/*.spec.js", 
+        "**/cypress/**",
+        "**/e2e/**"
+      ]
+    }
+  }
+}
+```
+
+## Export Configuration
+
+### Default Export Settings
+
+```json
+{
+  "export": {
+    "defaultFormat": "csv",
+    "outputDirectory": "./",
+    "timestampFormat": "YYYY-MM-DDTHH-mm-ss",
+    "includeMetadata": true
+  }
+}
+```
+
+### CSV Export Options
+
+```json
+{
+  "export": {
+    "csv": {
+      "delimiter": ",",
+      "includeHeaders": true,
+      "includeComments": true,
+      "dateFormat": "YYYY-MM-DD HH:mm:ss"
+    }
+  }
+}
+```
+
+## Team Sharing
+
+### Version Control
+
+**Recommended `.gitignore`:**
+```gitignore
+# Digest workspace
+.digest/
+!.digest/config.json
+
+# Keep config but ignore sensitive data
+.digest/config.json
+# Then use git-crypt or similar for the actual config
+
+# Export files (optional)
+digest-export-*.csv
+digest-export-*.json
+```
+
+### Shared Configuration
+
+**Team Config Template:**
+```json
+{
+  "version": "0.1.0",
+  "github": {
+    "apiUrl": "https://api.github.com"
+  },
+  "repositories": [
+    {
+      "name": "myorg/frontend-app",
+      "active": true,
+      "syncOptions": {
+        "since": "2024-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "name": "myorg/backend-api", 
+      "active": true,
+      "syncOptions": {
+        "since": "2024-01-01T00:00:00.000Z"
+      }
+    }
+  ],
+  "settings": {
+    "defaultTimeframe": "30d"
+  }
+}
+```
+
+**Team Setup Script:**
+```bash
+#!/bin/bash
+# setup-team-digest.sh
+
+# Initialize with team configuration
+digest init --token $GITHUB_TOKEN
+
+# Copy team config (without sensitive data)
+cp team-digest-config.json .digest/config.json
+
+# Sync all repositories
+digest sync
+
+echo "Team digest setup complete!"
+echo "Run 'digest status' to verify"
+```
+
+## Environment Variables
+
+### Supported Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | GitHub personal access token | None |
+| `DIGEST_CONFIG_PATH` | Custom config file location | `.digest/config.json` |
+| `DIGEST_DB_PATH` | Custom database location | `.digest/digest.db` |
+| `DIGEST_API_URL` | GitHub API URL (for Enterprise) | `https://api.github.com` |
+| `DIGEST_RATE_LIMIT_MARGIN` | Rate limit safety margin | `100` |
+
+### Environment Configuration
+
+```bash
+# .env file for team consistency
+export GITHUB_TOKEN="ghp_team_token_here"
+export DIGEST_CONFIG_PATH="/shared/config/digest.json"
+export DIGEST_DB_PATH="/shared/data/team-metrics.db"
+
+# Source in your shell profile
+source .env
+```
+
+## Security Considerations
+
+### Token Security
+
+**Best Practices:**
+- Use tokens with minimal required scopes
+- Rotate tokens regularly
+- Use GitHub Apps for organization-wide access
+- Never commit tokens to version control
+
+**Token Storage:**
+```bash
+# Use system keychain (macOS)
+security add-generic-password -a digest -s github-token -w ghp_your_token
+
+# Use environment variables
+export GITHUB_TOKEN=$(security find-generic-password -a digest -s github-token -w)
+```
+
+### Data Privacy
+
+**Sensitive Data Handling:**
+- Review exported data before sharing
+- Consider anonymizing contributor names
+- Restrict access to detailed metrics
+- Follow company data retention policies
+
+### Access Control
+
+**Repository Access:**
+- Ensure tokens have appropriate repository access
+- Use organization-level tokens for team setups
+- Audit repository access regularly
+- Monitor for access changes
+
+## Performance Optimization
+
+### Large Repository Handling
+
+```json
+{
+  "name": "kubernetes/kubernetes",
+  "syncOptions": {
+    "since": "2024-01-01T00:00:00.000Z",
+    "batchSize": 50,
+    "includeLabels": ["kind/bug", "kind/feature"],
+    "excludeAuthors": ["k8s-ci-robot", "dependabot[bot]"]
+  }
+}
+```
+
+### Database Optimization
+
+```json
+{
+  "database": {
+    "pragma": {
+      "journal_mode": "WAL",
+      "synchronous": "NORMAL", 
+      "cache_size": -128000,
+      "temp_store": "MEMORY"
+    }
+  }
+}
+```
+
+### Rate Limit Management
+
+```json
+{
+  "settings": {
+    "rateLimitMargin": 200,
+    "concurrentRequests": 3,
+    "requestDelay": 100,
+    "retryBackoff": "exponential"
+  }
+}
+```
+
+## Troubleshooting Configuration
+
+### Validation
+
+```bash
+# Check configuration validity
+digest status
+
+# Test GitHub connectivity
+digest sync --dry-run
+
+# Validate repository access
+digest add test-org/test-repo --dry-run
+```
+
+### Common Issues
+
+**Invalid Configuration:**
+- Run `digest status` to check config validity
+- Verify JSON syntax in `.digest/config.json`
+- Check file permissions
+
+**Authentication Failures:**
+- Verify token scopes and expiration
+- Test with GitHub CLI: `gh auth status`
+- Check API URL for Enterprise setups
+
+**Sync Issues:**
+- Review repository access permissions
+- Check rate limit status
+- Verify network connectivity

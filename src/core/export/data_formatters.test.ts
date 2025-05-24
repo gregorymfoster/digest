@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatAsJson, formatAsCsv } from './data_formatters';
-import { AnalyticsResult } from '../analytics/pipeline';
+import { formatAsJson, formatAsCsv } from './data_formatters.js';
+import { AnalyticsResult } from '../analytics/pipeline.js';
 
 const mockAnalyticsData: AnalyticsResult = {
   contributors: {

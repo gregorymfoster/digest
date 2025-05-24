@@ -1,4 +1,4 @@
-import ora from 'ora';
+import ora, { type Ora } from 'ora';
 import chalk from 'chalk';
 import { WorkspaceManager } from '../../core/workspace/index.js';
 import { SyncOrchestrator } from '../../core/sync/index.js';
@@ -122,7 +122,7 @@ const syncAllRepositories = async (
 
   console.log(chalk.cyan(`🔄 Syncing ${activeRepos.length} repositories...\n`));
   
-  const spinners = new Map<string, ora.Ora>();
+  const spinners = new Map<string, Ora>();
   
   // Initialize spinners for each repository
   for (const repo of activeRepos) {

@@ -1,0 +1,289 @@
+# Data Export
+
+Export your analytics data for further analysis, reporting, or integration with other tools.
+
+## Export Command
+
+```bash
+digest export [options]
+```
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--format <format>` | Output format (`csv`, `json`) | `csv` |
+| `--output <file>` | Output file path | Auto-generated |
+| `--timeframe <period>` | Time period for data | `30d` |
+| `--repository <repo>` | Export specific repository | All repositories |
+
+## Export Formats
+
+### CSV Export
+
+CSV format is ideal for:
+- **Spreadsheet Analysis**: Open in Excel, Google Sheets, etc.
+- **Data Visualization**: Import into BI tools
+- **Manual Review**: Human-readable format
+- **Reports**: Generate management reports
+
+**Example:**
+```bash
+digest export --format csv --timeframe 90d
+```
+
+**Sample Output Structure:**
+```csv
+# Digest Analytics Export
+# Generated: 2024-01-15T10:30:00.000Z
+# Timeframe: 90d
+# Repositories: facebook/react, vercel/next.js
+
+## Summary
+metric,value
+total_prs,245
+total_contributors,18
+total_reviews,567
+avg_pr_size,125.50
+test_rate,89.4%
+
+## Top Contributors
+rank,author,prs,lines_changed,avg_merge_time
+1,alice-dev,25,4200,1.2 days
+2,bob-engineer,18,3100,0.8 days
+3,charlie-ops,12,2800,2.1 days
+
+## Review Metrics
+metric,value
+avg_time_to_first_review,4.2 hours
+avg_time_to_merge,1.8 days
+avg_reviews_per_pr,2.30
+
+## Top Reviewers
+reviewer,reviews_given,avg_response_time_hours,approval_rate,repositories
+alice-lead,34,2.10,94.0%,facebook/react; vercel/next.js
+bob-senior,28,3.80,89.0%,facebook/react
+```
+
+### JSON Export
+
+JSON format is ideal for:
+- **Programmatic Analysis**: Process with scripts
+- **API Integration**: Feed into other systems
+- **Data Pipelines**: ETL processes
+- **Custom Dashboards**: Build custom visualizations
+
+**Example:**
+```bash
+digest export --format json --output analytics.json
+```
+
+**Sample Output Structure:**
+```json
+{
+  "contributors": {
+    "totalContributors": 18,
+    "totalPRs": 245,
+    "totalLines": 45600,
+    "avgPRSize": 125.5,
+    "testRate": 0.894,
+    "topContributors": [
+      {
+        "author": "alice-dev",
+        "prs": 25,
+        "lines": 4200,
+        "avgMergeTime": "1.2 days"
+      }
+    ],
+    "timeframe": "90d"
+  },
+  "reviews": {
+    "avgMetrics": {
+      "timeToFirstReview": "4.2 hours",
+      "timeToMerge": "1.8 days",
+      "reviewsPerPR": 2.3
+    },
+    "topReviewers": [
+      {
+        "reviewer": "alice-lead",
+        "reviewsGiven": 34,
+        "avgResponseTime": 2.1,
+        "approvalRate": 0.94,
+        "repositories": ["facebook/react", "vercel/next.js"]
+      }
+    ]
+  },
+  "overview": {
+    "totalPRs": 245,
+    "totalContributors": 18,
+    "totalReviews": 567,
+    "timeframe": "90d",
+    "repositories": ["facebook/react", "vercel/next.js"]
+  },
+  "generatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+## Export Examples
+
+### Basic Exports
+
+```bash
+# Default CSV export (last 30 days)
+digest export
+
+# JSON export for programmatic use
+digest export --format json
+
+# Longer timeframe for quarterly reports
+digest export --timeframe 90d --format csv
+```
+
+### Targeted Exports
+
+```bash
+# Single repository export
+digest export --repository facebook/react --format json
+
+# Specific output location
+digest export --output ~/reports/team-metrics.csv
+
+# Annual export for performance reviews
+digest export --timeframe 1y --format csv --output annual-review.csv
+```
+
+### Automated Exports
+
+```bash
+# Weekly team reports
+digest export --timeframe 7d --output weekly-$(date +%Y-%m-%d).csv
+
+# Monthly JSON for dashboard
+digest export --timeframe 30d --format json --output dashboard-data.json
+```
+
+## File Naming
+
+When `--output` is not specified, digest auto-generates filenames:
+
+**Format:** `digest-export-{timestamp}-{scope}.{format}`
+
+**Examples:**
+- `digest-export-2024-01-15T10-30-00-all-repos.csv`
+- `digest-export-2024-01-15T10-30-00-facebook-react.json`
+
+## Integration Examples
+
+### Spreadsheet Analysis
+
+1. Export CSV data:
+   ```bash
+   digest export --timeframe 90d --format csv
+   ```
+
+2. Open in Excel/Google Sheets
+3. Create pivot tables and charts
+4. Generate management reports
+
+### Business Intelligence Tools
+
+```bash
+# Export for Tableau, Power BI, etc.
+digest export --format csv --timeframe 1y --output team-metrics.csv
+```
+
+### Custom Dashboards
+
+```javascript
+// Fetch JSON data for web dashboard
+const fs = require('fs');
+const analytics = JSON.parse(fs.readFileSync('analytics.json', 'utf8'));
+
+console.log(`Total PRs: ${analytics.overview.totalPRs}`);
+console.log(`Top Contributor: ${analytics.contributors.topContributors[0].author}`);
+```
+
+### Automated Reporting
+
+```bash
+#!/bin/bash
+# Weekly team report script
+
+# Export data
+digest export --timeframe 7d --format csv --output weekly-report.csv
+
+# Email to team (example with sendmail)
+{
+  echo "Subject: Weekly Development Metrics"
+  echo "Content-Type: text/plain"
+  echo ""
+  echo "Weekly development metrics attached."
+  echo ""
+  digest contributors --timeframe 7d
+} | sendmail -a weekly-report.csv team@company.com
+```
+
+## Data Processing Tips
+
+### CSV Processing
+
+**With pandas (Python):**
+```python
+import pandas as pd
+
+# Read the CSV export
+df = pd.read_csv('digest-export.csv', comment='#')
+
+# Filter to summary section
+summary = df[df.columns[0]].str.contains('## Summary', na=False)
+```
+
+**With awk (Unix):**
+```bash
+# Extract contributor data
+awk '/## Top Contributors/,/^$/ {print}' digest-export.csv
+```
+
+### JSON Processing
+
+**With jq:**
+```bash
+# Get top 3 contributors
+jq '.contributors.topContributors[:3]' analytics.json
+
+# Calculate total lines by top contributors
+jq '.contributors.topContributors | map(.lines) | add' analytics.json
+```
+
+**With Python:**
+```python
+import json
+
+with open('analytics.json') as f:
+    data = json.load(f)
+
+top_contributor = data['contributors']['topContributors'][0]
+print(f"Top contributor: {top_contributor['author']} with {top_contributor['prs']} PRs")
+```
+
+## Export Best Practices
+
+### Regular Exports
+- Schedule weekly/monthly exports for trending analysis
+- Keep historical exports to track team evolution
+- Export before major team or process changes
+
+### Data Retention
+- Store exports in version control for team access
+- Include metadata about team composition and processes
+- Document any significant events that might affect metrics
+
+### Sharing and Collaboration
+- Use consistent timeframes for team comparisons
+- Include context when sharing metrics with stakeholders
+- Combine exports with qualitative insights
+
+### Security Considerations
+- Review exported data for sensitive information
+- Control access to detailed contributor analytics
+- Consider anonymizing data for broader distribution

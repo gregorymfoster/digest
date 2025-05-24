@@ -1,0 +1,221 @@
+# Data Synchronization
+
+The `digest sync` command fetches PR and review data from GitHub repositories.
+
+## `digest sync`
+
+Synchronize PR and review data from tracked repositories.
+
+### Usage
+
+```bash
+digest sync [repo] [options]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[repo]` | Specific repository to sync (optional) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--force` | Force full re-sync (ignore last sync point) |
+| `--since <date>` | Sync PRs since date (for new repos) |
+
+### Examples
+
+```bash
+# Sync all tracked repositories
+digest sync
+
+# Sync specific repository
+digest sync facebook/react
+
+# Force complete re-sync
+digest sync --force
+
+# Sync with custom start date
+digest sync facebook/react --since 2024-01-01
+```
+
+## How Sync Works
+
+### Incremental Sync
+Digest uses incremental synchronization to efficiently update data:
+
+1. **Tracks Last Sync Point**: Each repository remembers when it was last synced
+2. **Fetches New Data**: Only fetches PRs and reviews updated since last sync
+3. **Handles Updates**: Detects changes to existing PRs (status changes, new reviews)
+4. **Rate Limit Aware**: Automatically handles GitHub API rate limiting
+
+### Data Collection
+
+For each repository, digest collects:
+
+**Pull Request Data:**
+- Basic metadata (number, title, author, dates)
+- State changes (opened, merged, closed)
+- File changes (additions, deletions)
+- Labels and test indicators
+
+**Review Data:**
+- Review comments and approvals
+- Reviewer information and timing
+- Review state changes
+- Response time metrics
+
+### Progress Tracking
+
+Sync operations show real-time progress:
+
+```
+🔄 Syncing 3 repositories...
+
+facebook/react       ⠋ Processing 45/120 PRs (PR #1234)
+vercel/next.js      ✅ Synced 89 PRs
+microsoft/typescript ⏳ Fetching PRs from GitHub...
+```
+
+## Performance Considerations
+
+### Rate Limiting
+GitHub API has rate limits:
+- **Authenticated**: 5,000 requests per hour
+- **GitHub Apps**: Higher limits available
+
+Digest automatically:
+- Monitors rate limit status
+- Pauses when limits are reached
+- Resumes when limits reset
+- Shows estimated completion time
+
+### Large Repositories
+
+For repositories with extensive history:
+
+```bash
+# Limit historical data
+digest add large-org/huge-repo --since 90d
+
+# Sync during off-peak hours
+digest sync large-org/huge-repo
+```
+
+### Network Issues
+
+Digest handles network interruptions gracefully:
+- Automatic retry with exponential backoff
+- Resume from last successful sync point  
+- Error reporting with suggestions
+
+## Sync Outputs
+
+### Successful Sync
+
+```
+✅ Successfully synced facebook/react
+
+📊 Sync Summary:
+  New PRs: 12
+  Updated PRs: 5
+  New Reviews: 34
+  Duration: 2m 15s
+  Rate Limit: 4,823/5,000 remaining
+```
+
+### Multi-Repository Sync
+
+```
+🔄 Syncing 3 repositories...
+
+✅ facebook/react: 12 new PRs, 34 reviews (2m 15s)
+✅ vercel/next.js: 8 new PRs, 21 reviews (1m 45s)
+✅ microsoft/typescript: 15 new PRs, 42 reviews (3m 12s)
+
+📊 Total Summary:
+  Repositories: 3/3 successful
+  New PRs: 35
+  New Reviews: 97
+  Total Duration: 7m 12s
+```
+
+### Error Handling
+
+```
+❌ Sync failed for microsoft/typescript
+
+Error: API rate limit exceeded
+  - Rate limit resets in: 45 minutes
+  - Suggestion: Try again after 2024-01-15 15:30:00
+
+Other repositories synced successfully.
+```
+
+## Troubleshooting Sync Issues
+
+### Common Issues
+
+**Authentication Errors:**
+```bash
+# Check token validity
+digest status
+
+# Re-initialize if needed
+digest init --token ghp_new_token
+```
+
+**Permission Errors:**
+- Ensure token has `repo` scope for private repositories
+- Verify repository access permissions
+
+**Rate Limit Issues:**
+- Wait for rate limit reset (shown in error message)
+- Consider GitHub Apps for higher limits
+- Sync smaller batches with specific repository targeting
+
+**Network Timeouts:**
+- Check internet connectivity
+- Try syncing individual repositories
+- Run during off-peak hours
+
+### Force Re-sync
+
+If data appears inconsistent:
+
+```bash
+# Force complete re-sync
+digest sync --force
+
+# Re-sync specific repository
+digest sync facebook/react --force
+```
+
+### Monitoring Sync Health
+
+```bash
+# Check last sync times
+digest status
+
+# View repository-specific status
+digest list
+```
+
+## Best Practices
+
+### Initial Setup
+1. Add repositories with appropriate `--since` dates
+2. Run initial sync during off-peak hours
+3. Monitor rate limit usage during large syncs
+
+### Ongoing Maintenance
+1. Run sync regularly (daily/weekly)
+2. Monitor sync errors in `digest status`
+3. Update authentication tokens before expiry
+
+### Team Usage
+1. Share workspace configuration via version control
+2. Coordinate sync schedules to avoid rate limits
+3. Document repository access requirements

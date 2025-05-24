@@ -1,0 +1,11 @@
+{
+  "index": "Overview",
+  "getting-started": "Getting Started",
+  "commands": "Commands",
+  "analytics": "Analytics",
+  "export": "Data Export",
+  "configuration": "Configuration", 
+  "examples": "Examples",
+  "api": "API Reference",
+  "troubleshooting": "Troubleshooting"
+}

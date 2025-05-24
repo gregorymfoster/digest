@@ -1,0 +1,340 @@
+# Examples
+
+Real-world usage scenarios and workflows for digest.
+
+## Team Onboarding
+
+### New Team Member Analysis
+
+Track how new team members are integrating:
+
+```bash
+# Set up tracking for your team's repositories
+digest init
+digest add myorg/frontend-app --since 90d
+digest add myorg/backend-api --since 90d
+digest add myorg/mobile-app --since 90d
+digest sync
+
+# Analyze recent contributors to identify new team members
+digest contributors --timeframe 30d
+
+# Focus on specific new team member
+digest contributors --timeframe 30d | grep "jane-newdev"
+
+# Check their review activity
+digest reviews --reviewer jane-newdev --timeframe 30d
+```
+
+**Use Case**: Help new team members understand contribution patterns and identify mentorship opportunities.
+
+## Sprint Planning
+
+### Team Capacity Assessment
+
+```bash
+# Analyze last sprint's contribution patterns
+digest contributors --timeframe 14d --limit 20
+
+# Export detailed data for planning
+digest export --timeframe 30d --format csv --output sprint-planning.csv
+
+# Check review bandwidth
+digest reviews --timeframe 14d
+```
+
+**Analysis Questions**:
+- Who has highest velocity for complex features?
+- Which reviewers have capacity for additional PRs?
+- Are there any contribution pattern changes to consider?
+
+## Performance Reviews
+
+### Individual Contributor Assessment
+
+```bash
+# Annual performance data
+digest export --timeframe 1y --format json --output annual-metrics.json
+
+# Quarterly comparison
+digest contributors --timeframe 90d > q4-contributors.txt
+digest export --timeframe 2024-07-01 --format csv --output q3-contributors.csv
+
+# Focus on specific contributor
+digest contributors --timeframe 1y | grep "alice-dev"
+digest reviews --reviewer alice-dev --timeframe 1y
+```
+
+**Metrics to Review**:
+- Contribution volume and consistency
+- Code quality indicators (test coverage)
+- Collaboration effectiveness (review participation)
+- Technical leadership (mentoring through reviews)
+
+## Process Improvement
+
+### Review Process Optimization
+
+```bash
+# Identify review bottlenecks
+digest reviews --timeframe 30d
+
+# Compare before/after process changes
+digest export --timeframe 2024-01-01 --format csv --output before-process-change.csv
+digest export --timeframe 60d --format csv --output after-process-change.csv
+
+# Track improvement over time
+digest reviews --timeframe 7d  # Weekly check-ins
+```
+
+**Improvement Areas**:
+- Reduce time to first review
+- Balance review workload
+- Improve approval rates
+- Optimize PR size and complexity
+
+## Cross-Team Collaboration
+
+### Multi-Team Analysis
+
+```bash
+# Set up tracking for multiple team repositories
+digest add platform-team/infrastructure --since 90d
+digest add frontend-team/web-app --since 90d  
+digest add backend-team/api-service --since 90d
+digest add mobile-team/ios-app --since 90d
+digest sync
+
+# Compare team contributions
+digest contributors --repository platform-team/infrastructure
+digest contributors --repository frontend-team/web-app
+
+# Identify cross-team collaborators
+digest export --format json --output cross-team-analysis.json
+```
+
+**Analysis Focus**:
+- Cross-pollination between teams
+- Shared infrastructure contributions
+- Knowledge sharing patterns
+
+## Quality Assurance
+
+### Test Coverage Monitoring
+
+```bash
+# Track test coverage trends
+digest contributors --timeframe 30d  # Shows test rates
+
+# Detailed analysis for quality initiatives
+digest export --format csv --timeframe 90d --output quality-metrics.csv
+
+# Repository-specific test tracking
+digest contributors --repository myorg/critical-service --timeframe 30d
+```
+
+**Quality Indicators**:
+- Test coverage percentage trends
+- Contributors with highest test rates
+- Repositories needing test improvements
+
+## Release Management
+
+### Release Readiness Assessment
+
+```bash
+# Pre-release contributor activity
+digest contributors --timeframe 7d --repository myorg/main-product
+
+# Review velocity before release
+digest reviews --timeframe 14d --repository myorg/main-product
+
+# Export release metrics
+digest export --repository myorg/main-product --timeframe 30d --output release-1.5-metrics.csv
+```
+
+**Release Metrics**:
+- Contribution stability before release
+- Review thoroughness and timing
+- Team capacity for bug fixes
+
+## Quarterly Business Reviews
+
+### Executive Reporting
+
+```bash
+# Generate quarterly executive summary
+digest export --timeframe 90d --format csv --output q4-executive-summary.csv
+
+# Annual team performance overview
+digest export --timeframe 1y --format json --output annual-team-performance.json
+
+# Key metrics for stakeholders
+digest contributors --timeframe 90d --limit 10 > top-contributors-q4.txt
+digest reviews --timeframe 90d > review-metrics-q4.txt
+```
+
+**Executive Insights**:
+- Team productivity trends
+- Code quality improvements
+- Development velocity metrics
+- Team scaling effectiveness
+
+## Automation Examples
+
+### CI/CD Integration
+
+```bash
+#!/bin/bash
+# Daily metrics collection script
+
+# Update data
+digest sync
+
+# Generate daily dashboard data
+digest export --timeframe 7d --format json --output /var/www/dashboard/data.json
+
+# Alert on anomalies
+RECENT_PRS=$(digest contributors --timeframe 1d | grep "Total:" | cut -d' ' -f3)
+if [ "$RECENT_PRS" -lt 5 ]; then
+    echo "Alert: Low PR activity today ($RECENT_PRS PRs)"
+fi
+```
+
+### Slack Bot Integration
+
+```javascript
+// Weekly team digest for Slack
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+// Export weekly data
+execSync('digest export --timeframe 7d --format json --output weekly.json');
+const data = JSON.parse(fs.readFileSync('weekly.json', 'utf8'));
+
+const message = {
+    text: "📊 Weekly Development Digest",
+    blocks: [
+        {
+            type: "section",
+            text: {
+                type: "mrkdwn",
+                text: `*Weekly Stats*\n• PRs: ${data.overview.totalPRs}\n• Contributors: ${data.overview.totalContributors}\n• Reviews: ${data.overview.totalReviews}`
+            }
+        },
+        {
+            type: "section",
+            text: {
+                type: "mrkdwn", 
+                text: `*Top Contributor*\n${data.contributors.topContributors[0].author} with ${data.contributors.topContributors[0].prs} PRs`
+            }
+        }
+    ]
+};
+
+// Send to Slack webhook
+// ... webhook implementation
+```
+
+### Git Hooks Integration
+
+```bash
+#!/bin/bash
+# .git/hooks/post-merge
+# Auto-sync after pulling main branch
+
+if [ "$1" = "main" ]; then
+    echo "Updating digest data..."
+    digest sync --repository $(git remote get-url origin | sed 's/.*\///' | sed 's/\.git//')
+fi
+```
+
+## Advanced Analysis
+
+### Contribution Pattern Analysis
+
+```python
+import json
+import pandas as pd
+from datetime import datetime, timedelta
+
+# Load multiple time periods for trend analysis
+periods = ['7d', '30d', '90d']
+data = {}
+
+for period in periods:
+    os.system(f'digest export --timeframe {period} --format json --output {period}.json')
+    with open(f'{period}.json') as f:
+        data[period] = json.load(f)
+
+# Analyze contribution velocity trends
+for period in periods:
+    contributors = data[period]['contributors']['topContributors']
+    total_prs = sum(c['prs'] for c in contributors)
+    print(f"{period}: {total_prs} PRs from top contributors")
+
+# Identify trending contributors
+recent_contributors = set(c['author'] for c in data['7d']['contributors']['topContributors'][:5])
+historical_contributors = set(c['author'] for c in data['90d']['contributors']['topContributors'][:10])
+emerging_contributors = recent_contributors - historical_contributors
+print(f"Emerging contributors: {emerging_contributors}")
+```
+
+### Review Network Analysis
+
+```python
+# Analyze reviewer-author relationships
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Export and parse review data
+os.system('digest export --format json --timeframe 90d --output network.json')
+with open('network.json') as f:
+    data = json.load(f)
+
+# Build collaboration network
+G = nx.Graph()
+for reviewer in data['reviews']['topReviewers']:
+    for repo in reviewer['repositories']:
+        # Add edges between reviewers and repositories
+        G.add_edge(reviewer['reviewer'], repo, weight=reviewer['reviewsGiven'])
+
+# Analyze network properties
+print(f"Network density: {nx.density(G)}")
+print(f"Most connected reviewers: {sorted(G.degree(), key=lambda x: x[1], reverse=True)[:5]}")
+```
+
+## Team Health Monitoring
+
+### Burnout Prevention
+
+```bash
+# Monitor for unsustainable patterns
+digest contributors --timeframe 7d --limit 20 | grep -E "(PRs|Lines)" 
+
+# Check review workload distribution  
+digest reviews --timeframe 30d
+
+# Alert script for excessive activity
+#!/bin/bash
+HIGH_ACTIVITY=$(digest contributors --timeframe 7d | awk '/Total:/ {print $3}')
+if [ "$HIGH_ACTIVITY" -gt 50 ]; then
+    echo "Warning: Very high PR activity this week ($HIGH_ACTIVITY PRs)"
+    echo "Consider checking team workload distribution"
+fi
+```
+
+### Knowledge Distribution
+
+```bash
+# Identify single points of failure
+digest contributors --repository critical-service --timeframe 90d
+
+# Cross-training opportunities
+digest reviews --timeframe 90d | grep "repositories:" | sort | uniq -c
+
+# Expertise mapping
+digest export --format csv --timeframe 180d --output expertise-mapping.csv
+```
+
+These examples demonstrate how digest can be integrated into various development workflows to provide actionable insights for team management and process improvement.

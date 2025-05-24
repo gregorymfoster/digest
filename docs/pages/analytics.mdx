@@ -1,0 +1,256 @@
+# Analytics
+
+Digest provides comprehensive analytics to help you understand your development team's performance and patterns.
+
+## Metrics Overview
+
+### Contributor Metrics
+- **PR Count**: Number of pull requests authored
+- **Lines Changed**: Total additions and deletions
+- **Merge Time**: Average time from PR creation to merge
+- **Test Coverage**: Percentage of PRs that include tests
+- **Contribution Patterns**: Activity trends over time
+
+### Review Metrics  
+- **Response Time**: Time from PR creation to first review
+- **Approval Rate**: Percentage of reviews that approve changes
+- **Review Depth**: Average number of reviews per PR
+- **Reviewer Activity**: Distribution of review workload
+- **Bottleneck Analysis**: Slowest and fastest review cycles
+
+### Repository Insights
+- **Cross-Repository Comparison**: Metrics across multiple repos
+- **Team Distribution**: Contribution patterns by repository
+- **Health Scores**: Overall repository activity indicators
+
+## Time-Based Analysis
+
+All analytics support flexible timeframe filtering:
+
+### Relative Timeframes
+- `7d` - Last 7 days
+- `30d` - Last 30 days (default)
+- `90d` - Last 90 days  
+- `1y` - Last year
+
+### Absolute Dates
+- `2024-01-01` - Since specific date
+- ISO format supported for precise filtering
+
+### Usage Examples
+
+```bash
+# Quarter-over-quarter comparison
+digest contributors --timeframe 90d > q1-contributors.txt
+digest contributors --timeframe 2024-01-01 > ytd-contributors.txt
+
+# Weekly team standup insights
+digest reviews --timeframe 7d
+
+# Annual performance review data
+digest export --timeframe 1y --format csv
+```
+
+## Contributor Analytics
+
+Understanding individual and team contribution patterns.
+
+### Top Contributors View
+
+```bash
+digest contributors --timeframe 30d --limit 10
+```
+
+**Sample Output:**
+```
+📊 Top Contributors (Last 30 days)
+
+Rank  Author           PRs    Lines     Avg Merge Time
+───────────────────────────────────────────────────────
+ 1    alice-dev         25    +4.2K     1.2 days      
+ 2    bob-engineer      18    +3.1K     0.8 days      
+ 3    charlie-ops       12    +2.8K     2.1 days      
+ 4    diana-frontend    15    +1.9K     1.5 days      
+ 5    evan-backend      10    +2.4K     1.8 days      
+
+Total: 23 contributors, 142 PRs
+Lines: 18.7K total, 132 avg per PR
+Tests: 89% of PRs include tests
+```
+
+### Detailed Analysis
+
+```bash
+digest contributors --timeframe 30d --limit 25
+```
+
+Shows extended insights:
+- **Repository Breakdown**: PRs per repository
+- **Test Coverage by Contributor**: Individual test rates
+- **Contribution Patterns**: Activity distribution
+- **Merge Time Analysis**: Fastest and slowest merges
+
+### Key Metrics Explained
+
+**Lines Changed**: 
+- Includes both additions and deletions
+- Formatted for readability (1.2K, 3.4M)
+- Excludes generated files and large data files
+
+**Merge Time**:
+- Calculated from PR creation to merge
+- Excludes draft PRs and non-merged PRs
+- Human-readable format (2.3 days, 4.5 hours)
+
+**Test Rate**:
+- Percentage of PRs that include test file changes
+- Detected via common test patterns and directories
+- Helps identify code quality practices
+
+## Review Analytics
+
+Understanding code review effectiveness and bottlenecks.
+
+### Review Summary
+
+```bash
+digest reviews --timeframe 30d
+```
+
+**Sample Output:**
+```
+🔍 Code Review Analytics (Last 30 days)
+
+⚡ Response Times:
+  First Review: 4.2 hours avg (📈 12% improvement)
+  Time to Merge: 1.8 days avg
+  
+👥 Top Reviewers:
+  alice-lead      34 reviews • 2.1h avg response • 94% approval
+  bob-senior      28 reviews • 3.8h avg response • 89% approval
+  charlie-arch    22 reviews • 1.5h avg response • 96% approval
+
+🏆 Fastest Reviews:
+  PR #1245: feature/auth-improvement → 23 minutes
+  PR #1238: fix/memory-leak → 45 minutes
+  PR #1251: docs/api-update → 1.2 hours
+
+⏱️ Reviews Needing Attention:
+  PR #1253: feat/new-dashboard → 3.2 days waiting
+  PR #1249: refactor/db-layer → 2.8 days waiting
+```
+
+### Reviewer Focus
+
+```bash
+digest reviews --reviewer alice-lead --timeframe 90d
+```
+
+Shows detailed analysis for a specific reviewer:
+- Review volume and consistency
+- Response time patterns
+- Approval rate and feedback quality
+- Repository coverage
+
+### Review Timing Analysis
+
+Key metrics include:
+
+**Time to First Review**:
+- Critical for developer productivity
+- Indicates team responsiveness
+- Helps identify review bottlenecks
+
+**Time to Merge**:
+- End-to-end cycle time
+- Includes review iterations
+- Measures overall development velocity
+
+**Review Depth**:
+- Average reviews per PR
+- Quality indicator
+- Balance between thoroughness and speed
+
+## Cross-Repository Insights
+
+### Multi-Repo Comparison
+
+```bash
+# Compare across all tracked repositories
+digest contributors --timeframe 90d
+
+# Export for detailed analysis
+digest export --format csv --timeframe 90d
+```
+
+**Insights Available:**
+- Contributor activity across different projects
+- Repository-specific patterns and preferences
+- Cross-team collaboration indicators
+- Project health comparisons
+
+### Repository Filtering
+
+```bash
+# Focus on specific repository
+digest contributors --repository facebook/react
+
+# Compare frontend vs backend repositories
+digest contributors --repository myorg/frontend-app
+digest contributors --repository myorg/backend-api
+```
+
+## Trend Analysis
+
+### Period-over-Period Comparison
+
+```bash
+# Current quarter vs previous
+digest contributors --timeframe 90d > current-quarter.txt
+digest contributors --timeframe 2023-10-01 > previous-period.txt
+
+# Weekly trends
+digest reviews --timeframe 7d
+```
+
+### Seasonal Patterns
+
+Track how development patterns change over time:
+- Holiday and vacation impacts
+- Sprint cycle effects  
+- Team scaling effects
+- Process improvement results
+
+## Data Quality Indicators
+
+Digest provides indicators of data completeness and quality:
+
+### Coverage Metrics
+- **Sync Freshness**: When data was last updated
+- **Historical Depth**: How far back data extends
+- **Repository Coverage**: Percentage of organization repos tracked
+
+### Quality Signals
+- **Test Rate Trends**: Improving or declining test coverage
+- **Review Consistency**: Stable review patterns indicate healthy processes
+- **Response Time Stability**: Consistent review times indicate predictable workflows
+
+## Using Analytics for Decision Making
+
+### Engineering Management
+- **Capacity Planning**: Use contribution patterns to plan sprint capacity
+- **Skill Assessment**: Identify areas where team members excel
+- **Process Improvement**: Track the impact of workflow changes
+- **Recognition**: Highlight top contributors and reviewers
+
+### Team Health Monitoring
+- **Burnout Prevention**: Monitor for unsustainable contribution patterns
+- **Knowledge Distribution**: Ensure expertise isn't concentrated
+- **Onboarding Success**: Track new team member integration
+- **Code Quality**: Monitor test coverage and review thoroughness
+
+### Performance Optimization
+- **Review Bottlenecks**: Identify and address slow review cycles
+- **Collaboration Patterns**: Understand cross-team interactions
+- **Tool Effectiveness**: Measure impact of new development tools
+- **Best Practice Adoption**: Track adherence to coding standards

@@ -25,8 +25,8 @@ export const executeExportCommand = async (options: ExportCommandOptions): Promi
       return;
     }
     
-    const config = workspace.getConfig();
-    const repositories = options.repository ? [options.repository] : config.repositories;
+    const config = await workspace.load();
+    const repositories = options.repository ? [options.repository] : config.repositories?.map(r => r.name) || [];
     
     if (repositories.length === 0) {
       spinner.fail('No repositories configured. Add repositories with "digest add <repo>".');
@@ -34,9 +34,8 @@ export const executeExportCommand = async (options: ExportCommandOptions): Promi
     }
     
     // Validate timeframe
-    let timeRange: { start?: Date; end?: Date };
     try {
-      timeRange = parseTimeframe(options.timeframe);
+      parseTimeframe(options.timeframe);
     } catch {
       spinner.fail(`Invalid timeframe: ${options.timeframe}`);
       return;
@@ -44,11 +43,9 @@ export const executeExportCommand = async (options: ExportCommandOptions): Promi
     
     spinner.text = 'Computing analytics...';
     
-    const store = new SqliteStore(workspace.getDataPath());
+    const store = new SqliteStore(config.database?.path || './.digest/digest.db');
     const analytics = await computeAnalytics(store, {
       timeframe: options.timeframe,
-      start: timeRange.start,
-      end: timeRange.end,
       repositories
     });
     

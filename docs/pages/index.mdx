@@ -1,0 +1,92 @@
+# Digest
+
+📊 **Management insights dashboard for software development teams**
+
+Digest is a command-line tool that provides comprehensive analytics and insights for software development teams by analyzing GitHub pull requests and reviews. Get answers to critical management questions like "who is building what" and "which developers write the highest quality code."
+
+## Key Features
+
+### 🔄 **Data Synchronization**
+- Automatic GitHub PR and review data collection
+- Incremental sync with last sync point tracking
+- Multi-repository support
+- Rate-limiting and error handling
+
+### 📊 **Analytics Engine**
+- **Contributor Metrics**: PR counts, lines changed, merge times, test rates
+- **Review Analytics**: Response times, approval rates, reviewer statistics
+- **Time-based Filtering**: 7d, 30d, 90d, 1y, or custom date ranges
+- **Repository Insights**: Cross-repo analysis and comparison
+
+### 💾 **Data Export**
+- **CSV Export**: Human-readable format for spreadsheet analysis
+- **JSON Export**: Machine-readable format for programmatic use
+- Auto-generated timestamped files
+- Configurable output paths and filtering
+
+### 🎯 **Management Insights**
+Answer critical questions like:
+- Who are the top contributors across teams?
+- What's the average time to review and merge PRs?
+- Which developers have the highest test coverage rates?
+- How do review turnaround times compare across repositories?
+- What's the trend in contribution patterns over time?
+
+## Quick Start
+
+```bash
+# Install digest
+npm install -g @graphite/digest
+
+# Initialize workspace
+digest init
+
+# Add repositories to track
+digest add owner/repo
+
+# Sync PR data
+digest sync
+
+# View contributor analytics
+digest contributors --timeframe 30d
+
+# Export data
+digest export --format csv --timeframe 90d
+```
+
+## Architecture
+
+Digest follows a functional programming approach with TypeScript, featuring:
+
+- **Workspace-based Configuration**: Persistent state in `.digest/` directory
+- **SQLite Storage**: Efficient local data storage with better-sqlite3
+- **Incremental Sync**: Only fetch new data since last sync
+- **Modular Analytics**: Composable metrics computation
+- **Type Safety**: Full TypeScript coverage with Zod validation
+
+## Use Cases
+
+### **Engineering Managers**
+- Track team productivity and contribution patterns
+- Identify bottlenecks in the review process
+- Monitor test coverage trends
+- Generate reports for stakeholders
+
+### **Team Leads**
+- Understand individual contributor strengths
+- Balance workload across team members
+- Improve code review processes
+- Track sprint and project metrics
+
+### **DevOps/Platform Teams**
+- Analyze repository health across the organization
+- Identify high-impact contributors
+- Monitor development velocity trends
+- Export data for integration with other tools
+
+## Next Steps
+
+- [Getting Started](/getting-started) - Set up digest for your team
+- [Commands](/commands) - Complete command reference
+- [Analytics](/analytics) - Understanding the metrics
+- [Examples](/examples) - Real-world usage scenarios

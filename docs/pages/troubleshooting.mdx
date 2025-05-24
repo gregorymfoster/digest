@@ -1,0 +1,516 @@
+# Troubleshooting
+
+Common issues and solutions when using digest.
+
+## Installation Issues
+
+### Node.js Version Problems
+
+**Error:** `digest: command not found` or version conflicts
+
+**Solution:**
+```bash
+# Check Node.js version
+node --version  # Should be 18+
+
+# Update Node.js if needed
+nvm install 18
+nvm use 18
+
+# Reinstall digest
+npm install -g @graphite/digest
+```
+
+### Permission Errors
+
+**Error:** `EACCES: permission denied`
+
+**Solution:**
+```bash
+# Use npm prefix for user installs
+npm config set prefix ~/.npm-global
+export PATH=~/.npm-global/bin:$PATH
+
+# Or use npx for one-time usage
+npx @graphite/digest init
+```
+
+## Authentication Issues
+
+### GitHub Token Problems
+
+**Error:** `Authentication failed` or `Bad credentials`
+
+**Diagnosis:**
+```bash
+# Check token validity
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+
+# Check digest status
+digest status
+```
+
+**Solutions:**
+
+1. **Invalid Token:**
+   ```bash
+   # Re-initialize with new token
+   digest init --token ghp_new_token_here
+   ```
+
+2. **Insufficient Scopes:**
+   - Token needs `repo` scope for private repositories
+   - Token needs `public_repo` scope for public repositories
+   - Generate new token at https://github.com/settings/tokens
+
+3. **Expired Token:**
+   ```bash
+   # Check expiration in GitHub settings
+   # Generate new token and update
+   digest init --token ghp_replacement_token
+   ```
+
+### GitHub Enterprise Issues
+
+**Error:** API connection failures for Enterprise
+
+**Solution:**
+```bash
+# Verify Enterprise API URL
+curl https://github.company.com/api/v3/user
+
+# Configure custom API URL
+# Edit .digest/config.json:
+{
+  "github": {
+    "apiUrl": "https://github.company.com/api/v3"
+  }
+}
+```
+
+## Sync Issues
+
+### Rate Limiting
+
+**Error:** `API rate limit exceeded`
+
+**Diagnosis:**
+```bash
+# Check rate limit status
+curl -H "Authorization: token $GITHUB_TOKEN" \
+     https://api.github.com/rate_limit
+```
+
+**Solutions:**
+
+1. **Wait for Reset:**
+   ```bash
+   # Error shows reset time
+   # Wait and retry automatically
+   digest sync  # Will resume when limit resets
+   ```
+
+2. **Reduce Sync Scope:**
+   ```bash
+   # Sync specific repository
+   digest sync owner/repo
+   
+   # Use recent timeframe for new repos
+   digest add owner/repo --since 30d
+   ```
+
+3. **Optimize for Large Organizations:**
+   ```bash
+   # Use GitHub Apps for higher limits
+   # Sync during off-peak hours
+   # Contact GitHub for Enterprise rate increases
+   ```
+
+### Network Connectivity
+
+**Error:** `ENOTFOUND` or connection timeouts
+
+**Diagnosis:**
+```bash
+# Test GitHub connectivity
+ping api.github.com
+curl -I https://api.github.com
+
+# Test with proxy if needed
+export https_proxy=http://proxy.company.com:8080
+```
+
+**Solutions:**
+
+1. **Corporate Firewall:**
+   ```bash
+   # Configure proxy
+   npm config set proxy http://proxy.company.com:8080
+   npm config set https-proxy http://proxy.company.com:8080
+   ```
+
+2. **DNS Issues:**
+   ```bash
+   # Try alternative DNS
+   export NODE_OPTIONS="--dns-result-order=ipv4first"
+   ```
+
+### Repository Access
+
+**Error:** `Not Found` or `Repository not accessible`
+
+**Diagnosis:**
+```bash
+# Verify repository exists and you have access
+curl -H "Authorization: token $GITHUB_TOKEN" \
+     https://api.github.com/repos/owner/repo
+```
+
+**Solutions:**
+
+1. **Check Repository Name:**
+   ```bash
+   # Verify exact owner/repo format
+   digest add facebook/react  # ✓ Correct
+   digest add Facebook/React  # ✗ Wrong case
+   ```
+
+2. **Verify Access:**
+   - Ensure you're a collaborator on private repos
+   - Check organization membership for internal repos
+   - Verify token has repository access
+
+## Data Issues
+
+### No Data Found
+
+**Error:** Analytics show no results
+
+**Diagnosis:**
+```bash
+# Check workspace status
+digest status
+
+# Verify data exists
+digest list
+
+# Check timeframe
+digest contributors --timeframe 1y  # Broader timeframe
+```
+
+**Solutions:**
+
+1. **Empty Repository:**
+   ```bash
+   # Check if repository has PRs
+   curl -H "Authorization: token $GITHUB_TOKEN" \
+        "https://api.github.com/repos/owner/repo/pulls?state=all"
+   ```
+
+2. **Timeframe Too Narrow:**
+   ```bash
+   # Try broader timeframes
+   digest contributors --timeframe 90d
+   digest contributors --timeframe 1y
+   ```
+
+3. **Sync Required:**
+   ```bash
+   # Run initial sync
+   digest sync
+   
+   # Force re-sync if needed
+   digest sync --force
+   ```
+
+### Database Corruption
+
+**Error:** Database file corruption or SQLite errors
+
+**Solutions:**
+
+1. **Rebuild Database:**
+   ```bash
+   # Backup current database
+   cp .digest/digest.db .digest/digest.db.backup
+   
+   # Remove corrupted database
+   rm .digest/digest.db
+   
+   # Re-sync all data
+   digest sync --force
+   ```
+
+2. **Check Disk Space:**
+   ```bash
+   # Ensure sufficient disk space
+   df -h .
+   
+   # Clean up old export files if needed
+   rm digest-export-*.csv
+   ```
+
+## Performance Issues
+
+### Slow Sync Operations
+
+**Symptoms:** Sync takes very long time
+
+**Diagnosis:**
+```bash
+# Check repository size
+curl -H "Authorization: token $GITHUB_TOKEN" \
+     https://api.github.com/repos/owner/repo | jq '.size'
+
+# Monitor rate limit usage
+digest sync --verbose  # If available
+```
+
+**Solutions:**
+
+1. **Limit Historical Data:**
+   ```bash
+   # Use recent start date
+   digest add large-org/huge-repo --since 90d
+   
+   # Remove and re-add with limit
+   digest remove large-org/huge-repo
+   digest add large-org/huge-repo --since 30d
+   ```
+
+2. **Sync During Off-Peak:**
+   ```bash
+   # Schedule during low-usage times
+   # Use cron for automated syncing
+   0 2 * * * cd /path/to/project && digest sync
+   ```
+
+### High Memory Usage
+
+**Symptoms:** System slowdown during operations
+
+**Solutions:**
+
+1. **Reduce Batch Size:**
+   ```json
+   // Edit .digest/config.json
+   {
+     "settings": {
+       "batchSize": 50,
+       "concurrentRequests": 2
+     }
+   }
+   ```
+
+2. **Process Repositories Individually:**
+   ```bash
+   # Sync one repository at a time
+   for repo in $(digest list --format names); do
+     digest sync "$repo"
+   done
+   ```
+
+## Configuration Issues
+
+### Invalid Configuration
+
+**Error:** Config file parsing errors
+
+**Diagnosis:**
+```bash
+# Validate JSON syntax
+cat .digest/config.json | jq .
+
+# Check digest status
+digest status
+```
+
+**Solutions:**
+
+1. **Fix JSON Syntax:**
+   ```bash
+   # Use JSON validator
+   cat .digest/config.json | python -m json.tool
+   
+   # Common issues: trailing commas, unescaped quotes
+   ```
+
+2. **Reset Configuration:**
+   ```bash
+   # Backup current config
+   cp .digest/config.json .digest/config.json.backup
+   
+   # Re-initialize
+   digest init
+   
+   # Re-add repositories
+   digest add owner/repo
+   ```
+
+### File Permission Issues
+
+**Error:** Cannot write to `.digest/` directory
+
+**Solutions:**
+```bash
+# Check permissions
+ls -la .digest/
+
+# Fix permissions
+chmod 755 .digest/
+chmod 644 .digest/config.json
+chmod 644 .digest/digest.db
+```
+
+## Export Issues
+
+### Large Export Files
+
+**Symptoms:** Export operations fail or produce huge files
+
+**Solutions:**
+
+1. **Filter Data:**
+   ```bash
+   # Use specific timeframe
+   digest export --timeframe 30d
+   
+   # Export specific repository
+   digest export --repository owner/repo
+   ```
+
+2. **Use JSON Format:**
+   ```bash
+   # JSON is more compact than CSV
+   digest export --format json
+   ```
+
+### Export Format Issues
+
+**Error:** Exported files have incorrect format
+
+**Solutions:**
+
+1. **Check File Extension:**
+   ```bash
+   # Ensure proper extension
+   digest export --format csv --output data.csv
+   digest export --format json --output data.json
+   ```
+
+2. **Verify Output:**
+   ```bash
+   # Check first few lines
+   head -20 digest-export-*.csv
+   
+   # Validate JSON
+   jq . digest-export-*.json
+   ```
+
+## Common Error Messages
+
+### `ENOENT: no such file or directory`
+
+**Cause:** Missing `.digest/` directory or files
+
+**Solution:**
+```bash
+# Re-initialize workspace
+digest init
+```
+
+### `SQLite database disk image is malformed`
+
+**Cause:** Database corruption
+
+**Solution:**
+```bash
+# Remove corrupted database
+rm .digest/digest.db
+digest sync --force
+```
+
+### `Request failed with status code 404`
+
+**Cause:** Repository not found or no access
+
+**Solution:**
+```bash
+# Verify repository name and access
+# Check token permissions
+digest status
+```
+
+### `Network timeout`
+
+**Cause:** Slow network or proxy issues
+
+**Solution:**
+```bash
+# Check network configuration
+# Configure proxy if needed
+# Retry during better network conditions
+```
+
+## Getting Help
+
+### Debug Information
+
+```bash
+# Get comprehensive status
+digest status
+
+# Check version
+digest --version
+
+# View configuration (sanitized)
+cat .digest/config.json | jq 'del(.github.token)'
+```
+
+### Log Files
+
+Currently digest doesn't generate log files, but you can capture output:
+
+```bash
+# Capture sync output
+digest sync 2>&1 | tee sync.log
+
+# Capture all operations
+digest status > debug-info.txt 2>&1
+digest list >> debug-info.txt 2>&1
+```
+
+### Community Support
+
+- **GitHub Issues**: https://github.com/gregorymfoster/digest/issues
+- **Documentation**: Latest docs and troubleshooting guides
+- **Feature Requests**: Submit enhancement proposals
+
+### Reporting Bugs
+
+When reporting issues, include:
+
+1. **Environment Information:**
+   ```bash
+   node --version
+   npm --version
+   digest --version
+   uname -a  # On Unix systems
+   ```
+
+2. **Configuration (Sanitized):**
+   ```bash
+   cat .digest/config.json | jq 'del(.github.token)'
+   ```
+
+3. **Error Output:**
+   ```bash
+   # Full error message and stack trace
+   # Steps to reproduce
+   # Expected vs actual behavior
+   ```
+
+4. **Repository Information:**
+   - Repository size and activity level
+   - Team size and contribution patterns
+   - Any custom configuration

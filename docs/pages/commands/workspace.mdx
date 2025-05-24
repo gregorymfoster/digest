@@ -1,0 +1,224 @@
+# Workspace Management
+
+Workspace commands manage your digest configuration and tracked repositories.
+
+## `digest init`
+
+Initialize a new digest workspace in the current directory.
+
+### Usage
+
+```bash
+digest init [options]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--token <token>` | GitHub personal access token |
+
+### Examples
+
+```bash
+# Interactive initialization (prompts for token)
+digest init
+
+# Provide token directly
+digest init --token ghp_your_token_here
+```
+
+### What it does
+
+1. Creates `.digest/` directory
+2. Sets up `config.json` with GitHub authentication
+3. Initializes SQLite database
+4. Validates GitHub token permissions
+
+---
+
+## `digest add`
+
+Add a repository to tracking.
+
+### Usage
+
+```bash
+digest add <repo> [options]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `<repo>` | Repository in `owner/repo` format |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--since <date>` | Sync PRs since date (YYYY-MM-DD or 30d, 90d, 1y) |
+
+### Examples
+
+```bash
+# Add repository with full history
+digest add facebook/react
+
+# Add with recent history only
+digest add facebook/react --since 30d
+
+# Add with specific start date  
+digest add facebook/react --since 2024-01-01
+```
+
+### What it does
+
+1. Validates repository format and access
+2. Adds repository to workspace configuration
+3. Sets up initial sync parameters
+4. Repository becomes available for sync operations
+
+---
+
+## `digest remove`
+
+Remove a repository from tracking.
+
+### Usage
+
+```bash
+digest remove <repo>
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `<repo>` | Repository in `owner/repo` format |
+
+### Examples
+
+```bash
+# Remove repository
+digest remove facebook/react
+```
+
+### What it does
+
+1. Removes repository from workspace configuration
+2. Keeps historical data in database
+3. Repository will not be included in future syncs
+
+---
+
+## `digest list`
+
+List all tracked repositories.
+
+### Usage
+
+```bash
+digest list
+```
+
+### Example Output
+
+```
+📂 Tracked Repositories
+
+Repository              Status    Last Sync    PRs   Reviews
+──────────────────────────────────────────────────────────────
+facebook/react          ✅ Active  2h ago      1.2K   3.4K    
+vercel/next.js          ✅ Active  2h ago       890   2.1K    
+microsoft/typescript   ⏸️  Paused  5d ago      2.3K   5.7K    
+
+Total: 3 repositories (2 active)
+```
+
+### Status Indicators
+
+| Status | Description |
+|--------|-------------|
+| ✅ Active | Repository is being synced |
+| ⏸️ Paused | Repository sync is disabled |
+| ❌ Error | Last sync had errors |
+
+---
+
+## `digest status`
+
+Show detailed workspace status.
+
+### Usage  
+
+```bash
+digest status
+```
+
+### Example Output
+
+```
+📊 Digest Workspace Status
+
+🏗️ Configuration:
+  Workspace: /Users/you/project/.digest
+  Database: digest.db (2.3 MB)
+  GitHub Token: ✅ Valid (expires in 45 days)
+
+📂 Repositories (3 tracked, 2 active):
+  facebook/react       ✅ 1,234 PRs • Last sync: 2h ago
+  vercel/next.js       ✅ 890 PRs   • Last sync: 2h ago  
+  microsoft/typescript ⏸️ 2,345 PRs • Last sync: 5d ago
+
+📈 Data Summary:
+  PRs: 4,469
+  Reviews: 11,234
+  Contributors: 45
+
+🕐 Recent Activity:
+  Last 24h: 12 new PRs, 34 reviews
+  Last 7d:  89 new PRs, 203 reviews
+```
+
+### Status Sections
+
+- **Configuration**: Workspace location, database size, authentication status
+- **Repositories**: Per-repository sync status and data counts
+- **Data Summary**: Total metrics across all repositories  
+- **Recent Activity**: Activity trends over time
+
+---
+
+## Common Workspace Tasks
+
+### Setting Up Multiple Repositories
+
+```bash
+digest init
+digest add facebook/react --since 90d
+digest add vercel/next.js --since 90d  
+digest add microsoft/typescript --since 30d
+digest sync
+```
+
+### Pausing/Resuming Repositories
+
+Repositories can be paused to exclude them from syncs while preserving data:
+
+```bash
+# Currently requires manual config.json editing
+# Future versions will include digest pause/resume commands
+```
+
+### Workspace Cleanup
+
+```bash
+# Remove old repositories
+digest remove old-org/deprecated-repo
+
+# Check disk usage
+digest status
+
+# Database is automatically cleaned during sync operations
+```

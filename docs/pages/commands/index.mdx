@@ -1,0 +1,115 @@
+# Commands Overview
+
+Digest provides a comprehensive set of commands for managing workspaces, synchronizing data, and analyzing development metrics.
+
+## Command Categories
+
+### 🏗️ Workspace Management
+- [`digest init`](/commands/workspace#init) - Initialize a new workspace
+- [`digest add`](/commands/workspace#add) - Add repositories to tracking
+- [`digest remove`](/commands/workspace#remove) - Remove repositories 
+- [`digest list`](/commands/workspace#list) - List tracked repositories
+- [`digest status`](/commands/workspace#status) - Show workspace status
+
+### 🔄 Data Synchronization  
+- [`digest sync`](/commands/sync) - Sync PR and review data from GitHub
+
+### 📊 Analytics
+- [`digest contributors`](/commands/analytics#contributors) - View contributor metrics
+- [`digest reviews`](/commands/analytics#reviews) - View review analytics
+
+### 💾 Data Export
+- [`digest export`](/commands/export) - Export analytics to CSV or JSON
+
+## Global Options
+
+All commands support these global options:
+
+| Option | Description |
+|--------|-------------|
+| `--help` | Show help for the command |
+| `--version` | Show digest version |
+
+## Common Patterns
+
+### Typical Workflow
+
+```bash
+# 1. Set up workspace
+digest init
+digest add owner/repo
+
+# 2. Sync data  
+digest sync
+
+# 3. Analyze and export
+digest contributors --timeframe 30d
+digest export --format csv
+```
+
+### Filtering by Time
+
+Most analytics commands support time filtering:
+
+```bash
+# Last 7 days
+digest contributors --timeframe 7d
+
+# Last 90 days  
+digest reviews --timeframe 90d
+
+# Specific date range
+digest contributors --timeframe 2024-01-01
+
+# Last year
+digest contributors --timeframe 1y
+```
+
+### Repository Filtering
+
+Focus analysis on specific repositories:
+
+```bash
+# Single repository
+digest contributors --repository owner/repo
+
+# Export specific repo data
+digest export --repository owner/repo --format json
+```
+
+## Output Formats
+
+Digest provides rich, colorized output in the terminal and supports multiple export formats:
+
+### Terminal Output
+- Color-coded metrics (green for positive, yellow for neutral, red for attention)
+- Progress indicators for long-running operations  
+- Formatted tables with proper alignment
+- Summary statistics and insights
+
+### Export Formats
+- **CSV**: Human-readable format for spreadsheet analysis
+- **JSON**: Machine-readable format for programmatic use
+
+## Exit Codes
+
+Digest follows standard Unix exit code conventions:
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error (invalid arguments, API errors, etc.) |
+| `2` | Authentication error |
+| `3` | Network/connectivity error |
+| `4` | Data not found |
+
+## Getting Help
+
+For detailed help on any command:
+
+```bash
+digest --help
+digest <command> --help
+```
+
+For troubleshooting common issues, see the [Troubleshooting](/troubleshooting) guide.

@@ -1,0 +1,180 @@
+# API Reference
+
+Technical reference for digest data structures and export formats.
+
+## Overview
+
+Digest exposes data through its export functionality and internal data structures. This reference documents the formats and types used throughout the system.
+
+## Export Formats
+
+### JSON Export Structure
+
+The JSON export format provides a complete, machine-readable representation of analytics data:
+
+```typescript
+interface AnalyticsResult {
+  contributors: ContributorSummary;
+  reviews: ReviewSummary;
+  overview: OverviewSummary;
+  generatedAt: string; // ISO 8601 timestamp
+}
+```
+
+### CSV Export Structure
+
+The CSV export format provides a human-readable, spreadsheet-friendly representation with these sections:
+
+- **Metadata**: Generation timestamp, timeframe, repositories
+- **Summary**: High-level metrics and totals
+- **Top Contributors**: Ranked contributor data
+- **Review Metrics**: Aggregate review timing and statistics
+- **Top Reviewers**: Reviewer performance data
+
+## Data Flow
+
+```
+GitHub API → SQLite Storage → Analytics Engine → Export Formats
+     ↓              ↓              ↓              ↓
+  Raw PR/Review   Normalized    Computed      CSV/JSON
+     Data          Data        Metrics       Output
+```
+
+## Core Concepts
+
+### Time-based Filtering
+
+All analytics support flexible time filtering:
+
+- **Relative**: `7d`, `30d`, `90d`, `1y`
+- **Absolute**: `2024-01-01` (ISO date format)
+- **Computed**: Automatically calculated date ranges
+
+### Repository Scoping
+
+Analytics can be filtered by:
+- **All repositories**: Default behavior
+- **Single repository**: `--repository owner/repo`
+- **Multiple repositories**: Specified in configuration
+
+### Metric Categories
+
+**Contributor Metrics:**
+- Authorship and contribution volume
+- Code change statistics
+- Merge timing and patterns
+- Test coverage indicators
+
+**Review Metrics:**
+- Review timing and responsiveness
+- Approval rates and patterns
+- Reviewer workload distribution
+- Collaboration indicators
+
+## Data Accuracy
+
+### Sync Completeness
+
+Digest tracks sync completeness through:
+- Last sync timestamps per repository
+- Error tracking and reporting
+- Incremental update validation
+
+### Metric Calculations
+
+**Time Calculations:**
+- Based on GitHub API timestamps
+- Excludes draft PR time
+- Handles timezone differences automatically
+
+**Line Change Calculations:**
+- Sum of additions and deletions
+- Excludes generated files (detected by patterns)
+- Includes all file types by default
+
+**Test Detection:**
+- Pattern-based file analysis
+- Configurable test patterns
+- Common framework detection
+
+## Rate Limiting and Performance
+
+### GitHub API Integration
+
+- Automatic rate limit handling
+- Exponential backoff on errors
+- Batch processing for efficiency
+- Resume capability on interruption
+
+### Storage Optimization
+
+- SQLite with WAL mode for performance
+- Indexed queries for fast analytics
+- Automatic database maintenance
+- Configurable storage location
+
+## Security and Privacy
+
+### Token Handling
+
+- Encrypted storage of GitHub tokens
+- Minimal required permissions
+- Automatic token validation
+- Support for GitHub Apps
+
+### Data Privacy
+
+- Local-only data storage
+- No external data transmission
+- Configurable data retention
+- Anonymous export options
+
+## Extensibility
+
+### Custom Analytics
+
+The analytics engine is designed for extensibility:
+
+```typescript
+// Future API example
+interface CustomMetric {
+  name: string;
+  calculator: (prs: PullRequest[], reviews: Review[]) => any;
+  formatter: (data: any) => string;
+}
+```
+
+### Integration Points
+
+- **Export Formats**: JSON for programmatic access
+- **Database Access**: Direct SQLite queries possible
+- **Configuration**: Extensive customization options
+- **Filtering**: Multiple filter dimensions
+
+## Error Handling
+
+### Graceful Degradation
+
+- Partial data processing on errors
+- Continuation from last successful sync
+- Error reporting with context
+- Automatic retry mechanisms
+
+### Validation
+
+- Input validation at all levels
+- Configuration schema validation
+- Data consistency checks
+- Export format validation
+
+## Future API Considerations
+
+Planned enhancements to the API surface:
+
+- **Streaming Exports**: For large datasets
+- **Custom Metrics**: User-defined calculations
+- **Real-time Updates**: WebSocket or similar
+- **Advanced Filtering**: Query language support
+- **Aggregation API**: Pre-computed summaries
+
+See specific data type documentation for detailed schemas and examples.
