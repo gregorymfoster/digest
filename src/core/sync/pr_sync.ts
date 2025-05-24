@@ -27,6 +27,7 @@ export class PRSyncService {
   async syncRepository(options: PRSyncOptions): Promise<PRSyncResult> {
     const { repository, since, force, onProgress } = options;
     const { owner, repo } = this.parseRepository(repository);
+    const syncStartTime = Date.now();
     
     const result: PRSyncResult = {
       totalPRs: 0,
@@ -49,7 +50,7 @@ export class PRSyncService {
       });
 
       // Fetch all PRs (closed and merged)
-      const allPRs = await this.fetchAllPRs(owner, repo, syncSince);
+      const allPRs = await this.fetchAllPRs(owner, repo, syncSince, onProgress);
       result.totalPRs = allPRs.length;
 
       onProgress?.({
@@ -60,18 +61,28 @@ export class PRSyncService {
       });
 
       // Process each PR
+      const processingStartTime = Date.now();
       for (let i = 0; i < allPRs.length; i++) {
         const rawPR = allPRs[i];
         
         try {
           await this.processPR(owner, repo, rawPR, result);
           
+          // Calculate processing time estimates
+          const processingTimeElapsed = Date.now() - processingStartTime;
+          const processedSoFar = i + 1;
+          const estimatedProcessingTime = processedSoFar > 0 
+            ? (processingTimeElapsed / processedSoFar) * (allPRs.length - processedSoFar)
+            : undefined;
+          
           onProgress?.({
             phase: 'processing',
             totalPRs: allPRs.length,
-            processedPRs: i + 1,
+            processedPRs: processedSoFar,
             currentPR: rawPR.number,
-            errors: result.errors
+            errors: result.errors,
+            timeElapsed: processingTimeElapsed,
+            estimatedTimeRemaining: estimatedProcessingTime
           });
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -90,7 +101,8 @@ export class PRSyncService {
         phase: 'complete',
         totalPRs: allPRs.length,
         processedPRs: allPRs.length,
-        errors: result.errors
+        errors: result.errors,
+        timeElapsed: Date.now() - syncStartTime
       });
 
     } catch (error) {
@@ -133,10 +145,16 @@ export class PRSyncService {
     return since;
   }
 
-  private async fetchAllPRs(owner: string, repo: string, since?: string): Promise<RawPR[]> {
+  private async fetchAllPRs(
+    owner: string, 
+    repo: string, 
+    since?: string,
+    onProgress?: (progress: SyncProgress) => void
+  ): Promise<RawPR[]> {
     const allPRs: RawPR[] = [];
     let page = 1;
     const perPage = 100;
+    const startTime = Date.now();
 
     while (true) {
       const params: any = {
@@ -155,6 +173,12 @@ export class PRSyncService {
 
       const response = await this.octokit.rest.pulls.list(params);
       const prs = response.data as unknown as RawPR[];
+      
+      // Get rate limit info from response headers
+      const rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || '0');
+      const rateLimitResetAt = response.headers['x-ratelimit-reset'] 
+        ? new Date(parseInt(response.headers['x-ratelimit-reset']) * 1000).toISOString()
+        : undefined;
 
       if (prs.length === 0) {
         break; // No more PRs
@@ -162,12 +186,48 @@ export class PRSyncService {
 
       allPRs.push(...prs);
 
+      // Calculate time estimates
+      const timeElapsed = Date.now() - startTime;
+      let estimatedTimeRemaining: number | undefined;
+      let estimatedTotalPages: number | undefined;
+
+      // Estimate total pages and time remaining
+      if (page > 1 && prs.length === perPage) {
+        // If we're getting full pages, estimate based on current rate
+        const avgTimePerPage = timeElapsed / page;
+        // Conservative estimate: assume at least 2x more pages
+        estimatedTotalPages = Math.max(page * 2, page + 5);
+        estimatedTimeRemaining = avgTimePerPage * (estimatedTotalPages - page);
+      }
+
+      // Send progress update
+      onProgress?.({
+        phase: 'fetching',
+        totalPRs: allPRs.length,
+        processedPRs: allPRs.length,
+        errors: [],
+        fetchProgress: {
+          currentPage: page,
+          estimatedTotalPages,
+          prsThisPage: prs.length,
+          rateLimitRemaining,
+          rateLimitResetAt
+        },
+        timeElapsed,
+        estimatedTimeRemaining
+      });
+
       // If we got fewer than perPage, we're done
       if (prs.length < perPage) {
         break;
       }
 
       page++;
+
+      // Add small delay to be nice to GitHub API
+      if (rateLimitRemaining < 100) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
     return allPRs;

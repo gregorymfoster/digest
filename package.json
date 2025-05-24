@@ -7,7 +7,7 @@
     "node": ">=20.0.0"
   },
   "bin": {
-    "digest": "./dist/index.cjs"
+    "gdigest": "./dist/index.cjs"
   },
   "files": [
     "dist",

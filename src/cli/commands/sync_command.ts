@@ -14,21 +14,73 @@ export interface SyncCommandOptions {
  * Format sync progress for display
  */
 const formatProgress = (repository: string, progress: SyncProgress): string => {
-  const { phase, processedPRs, totalPRs, currentPR } = progress;
+  const { phase, processedPRs, totalPRs, currentPR, fetchProgress, timeElapsed, estimatedTimeRemaining } = progress;
   
   switch (phase) {
     case 'fetching':
+      if (fetchProgress) {
+        const { currentPage, estimatedTotalPages, prsThisPage, rateLimitRemaining } = fetchProgress;
+        let progressStr = `Fetching PRs from ${repository} (page ${currentPage}`;
+        
+        if (estimatedTotalPages) {
+          progressStr += `/${estimatedTotalPages}`;
+        }
+        
+        progressStr += `, ${processedPRs} PRs fetched`;
+        
+        if (prsThisPage > 0) {
+          progressStr += `, +${prsThisPage} this page`;
+        }
+        
+        progressStr += ')';
+        
+        // Add rate limit info if getting low
+        if (rateLimitRemaining < 100) {
+          progressStr += ` [${rateLimitRemaining} API calls remaining]`;
+        }
+        
+        // Add time estimate if available
+        if (estimatedTimeRemaining && estimatedTimeRemaining > 5000) {
+          const minutes = Math.ceil(estimatedTimeRemaining / 60000);
+          progressStr += ` ~${minutes}m remaining`;
+        }
+        
+        return progressStr;
+      }
       return `Fetching PRs from ${repository}...`;
     case 'processing':
       const current = currentPR ? ` (PR #${currentPR})` : '';
-      return `Processing ${processedPRs}/${totalPRs} PRs${current}`;
+      let processingStr = `Processing ${processedPRs}/${totalPRs} PRs${current}`;
+      
+      if (processedPRs > 0 && totalPRs > 0) {
+        const percentage = Math.round((processedPRs / totalPRs) * 100);
+        processingStr += ` [${percentage}%]`;
+      }
+      
+      return processingStr;
     case 'storing':
-      return `Storing data...`;
+      return `Storing ${totalPRs} PRs to database...`;
     case 'complete':
-      return `✅ Synced ${totalPRs} PRs`;
+      const duration = timeElapsed ? ` (${formatDuration(timeElapsed)})` : '';
+      return `✅ Synced ${totalPRs} PRs${duration}`;
     default:
       return `Processing...`;
   }
+};
+
+/**
+ * Format duration in a human-readable way
+ */
+const formatDuration = (milliseconds: number): string => {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  
+  if (minutes > 0) {
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+  
+  return `${seconds}s`;
 };
 
 /**

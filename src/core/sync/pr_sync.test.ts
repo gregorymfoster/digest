@@ -87,7 +87,11 @@ describe('PRSyncService', () => {
     it('should sync new repository successfully', async () => {
       // Mock API responses
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [samplePR]
+        data: [samplePR],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
@@ -157,7 +161,11 @@ describe('PRSyncService', () => {
 
       // Mock API to return only new PR (simulating incremental sync)
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [samplePR]
+        data: [samplePR],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
@@ -205,7 +213,11 @@ describe('PRSyncService', () => {
       storage.addPR(existingPR);
 
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [samplePR]
+        data: [samplePR],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
@@ -267,7 +279,11 @@ describe('PRSyncService', () => {
         const prWithFiles = { ...samplePR, number: 100 + i }; // Unique PR number
 
         vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-          data: [prWithFiles]
+          data: [prWithFiles],
+          headers: {
+            'x-ratelimit-remaining': '5000',
+            'x-ratelimit-reset': '1640995200'
+          }
         } as any);
 
         vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
@@ -304,7 +320,11 @@ describe('PRSyncService', () => {
 
     it('should handle individual PR processing errors', async () => {
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [samplePR]
+        data: [samplePR],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       // Simulate file fetch error
@@ -332,7 +352,11 @@ describe('PRSyncService', () => {
       const onProgress = vi.fn((progress) => progressCalls.push(progress));
 
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [samplePR]
+        data: [samplePR],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
@@ -371,8 +395,20 @@ describe('PRSyncService', () => {
       }));
 
       vi.mocked(mockOctokit.rest.pulls.list)
-        .mockResolvedValueOnce({ data: prs1 } as any)
-        .mockResolvedValueOnce({ data: prs2 } as any);
+        .mockResolvedValueOnce({ 
+          data: prs1,
+          headers: {
+            'x-ratelimit-remaining': '5000',
+            'x-ratelimit-reset': '1640995200'
+          }
+        } as any)
+        .mockResolvedValueOnce({ 
+          data: prs2,
+          headers: {
+            'x-ratelimit-remaining': '4999',
+            'x-ratelimit-reset': '1640995200'
+          }
+        } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({
         data: []
@@ -424,7 +460,11 @@ describe('PRSyncService', () => {
       };
 
       vi.mocked(mockOctokit.rest.pulls.list).mockResolvedValue({
-        data: [prWithoutUser]
+        data: [prWithoutUser],
+        headers: {
+          'x-ratelimit-remaining': '5000',
+          'x-ratelimit-reset': '1640995200'
+        }
       } as any);
 
       vi.mocked(mockOctokit.rest.pulls.listFiles).mockResolvedValue({

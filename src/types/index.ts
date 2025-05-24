@@ -123,4 +123,14 @@ export type SyncProgress = {
   processedPRs: number;
   currentPR?: number;
   errors: Array<{ pr: number; error: string }>;
+  // Enhanced progress tracking
+  fetchProgress?: {
+    currentPage: number;
+    estimatedTotalPages?: number;
+    prsThisPage: number;
+    rateLimitRemaining: number;
+    rateLimitResetAt?: string;
+  };
+  timeElapsed?: number; // milliseconds
+  estimatedTimeRemaining?: number; // milliseconds
 };
