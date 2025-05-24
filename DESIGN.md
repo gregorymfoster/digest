@@ -200,23 +200,141 @@ const hasTests = (pr: PRData): boolean => {
 
 ## CLI Interface
 
+### Workspace Concept
+
+Digest operates as a **stateful workspace** for team analytics:
+
+- **Persistent configuration**: Stores GitHub token, tracked repositories, and sync preferences
+- **Incremental sync**: Remembers last sync point for efficient updates
+- **Multi-repository tracking**: Manages multiple repos as a cohesive analytics workspace
+- **Background-friendly**: Designed for scheduled/automated syncing
+
 ### Essential Commands (MVP)
 
 ```bash
-# Setup and data collection
-digest sync <owner/repo>              # Sync PR data from repository
-digest sync <owner/repo> --since 30d  # Sync last 30 days only
+# Initial setup (one-time)
+digest init                           # Initialize workspace, save token
+digest add <owner/repo>               # Add repository to tracking
+digest add <owner/repo> --since 90d   # Add repo with historical data
 
-# Basic insights
-digest contributors                    # Top contributors by PR count
+# Data collection (can be automated)
+digest sync                           # Sync all tracked repos incrementally
+digest sync <owner/repo>              # Sync specific repo only
+digest sync --force                   # Full re-sync (ignore last sync point)
+
+# Workspace management
+digest list                           # List tracked repositories
+digest remove <owner/repo>            # Remove repo from tracking
+digest status                         # Show last sync times and repo status
+
+# Analytics (work on all tracked data)
+digest contributors                   # Top contributors across all repos
+digest contributors --repo <name>     # Contributors for specific repo
 digest contributors --timeframe 30d   # Contributors in last 30 days
 
-digest reviews                        # Review turnaround times
+digest reviews                        # Review analytics across all repos
 digest reviews --reviewer <name>      # Specific reviewer stats
+digest reviews --repo <owner/repo>    # Reviews for specific repo
 
 # Data export
 digest export --csv                   # Export all data to CSV
 digest export --json                  # Export all data to JSON
+digest export --repo <owner/repo>     # Export specific repo data
+```
+
+### Workspace Configuration
+
+Digest maintains persistent state in a local workspace configuration:
+
+```typescript
+// .digest/config.json
+{
+  "version": "1.0",
+  "github": {
+    "token": "ghp_xxxxxxxxxxxx",        // Saved GitHub token
+    "baseUrl": "https://api.github.com" // For enterprise instances
+  },
+  "repositories": [
+    {
+      "name": "facebook/react",
+      "addedAt": "2024-01-15T10:00:00Z",
+      "lastSyncAt": "2024-01-20T15:30:00Z",
+      "syncSince": "2024-01-01",         // Historical sync start point
+      "active": true
+    },
+    {
+      "name": "microsoft/typescript", 
+      "addedAt": "2024-01-16T09:00:00Z",
+      "lastSyncAt": "2024-01-20T15:32:00Z",
+      "syncSince": "2024-01-01",
+      "active": true
+    }
+  ],
+  "settings": {
+    "defaultTimeframe": "30d",
+    "autoSync": false,              // Future: automatic background sync
+    "syncIntervalHours": 6,         // Future: sync frequency
+    "dataRetentionDays": 365
+  }
+}
+```
+
+### Typical Workflow with State
+
+```bash
+# One-time setup (saves token and preferences)
+cd ~/team-analytics
+digest init
+# Prompts for GitHub token, saves to .digest/config.json
+
+# Add repositories to track
+digest add facebook/react --since 90d
+digest add microsoft/typescript --since 90d
+# Updates config.json with tracked repos
+
+# Regular sync (can be automated)
+digest sync
+# Syncs all tracked repos incrementally from last sync point
+# Updates lastSyncAt timestamps in config
+
+# Generate insights across all data
+digest contributors --timeframe 30d
+digest reviews
+digest export --csv
+
+# Check workspace status
+digest status
+# Shows:
+# ✓ facebook/react      Last sync: 2 hours ago    (1,247 PRs)  
+# ✓ microsoft/typescript Last sync: 2 hours ago    (892 PRs)
+# ✗ myorg/internal      Sync failed: API rate limit
+```
+
+### Incremental Sync Strategy
+
+```typescript
+// Track sync state per repository
+interface SyncState {
+  repository: string;
+  lastSyncAt: string;          // ISO timestamp of last successful sync
+  lastPRUpdated: string;       // Latest PR updated_at from last sync
+  totalPRsSynced: number;      // Running count for progress tracking
+  errors: Array<{             // Track sync issues
+    timestamp: string;
+    error: string;
+  }>;
+}
+
+// Efficient incremental sync
+await octokit.rest.pulls.list({
+  owner,
+  repo,
+  state: 'all',
+  sort: 'updated',
+  direction: 'desc',
+  since: lastSyncState.lastPRUpdated,  // Only fetch updated PRs
+  per_page: 100
+});
 ```
 
 ### Simple Report Outputs

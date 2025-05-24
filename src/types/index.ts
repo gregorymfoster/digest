@@ -3,21 +3,51 @@
  */
 
 export type DigestConfig = {
+  version?: string; // Config version for migrations
   github?: {
-    token?: string; // GitHub token (optional, will auto-detect)
+    token?: string; // GitHub token (saved after init)
     baseUrl?: string; // For GitHub Enterprise (optional)
     throttle?: {
       onRateLimit?: (retryAfter: number) => boolean;
       onSecondaryRateLimit?: (retryAfter: number) => boolean;
     };
   };
+  repositories?: TrackedRepository[]; // Repositories being tracked
+  settings?: {
+    defaultTimeframe?: string; // Default timeframe for analytics (30d, 90d, 1y)
+    autoSync?: boolean; // Future: automatic background sync
+    syncIntervalHours?: number; // Future: sync frequency
+    dataRetentionDays?: number; // Default 365
+  };
   concurrency?: number; // Default 10
   outputDir?: string; // Default './digest'
   cacheDir?: string; // Default '~/.digest-cache'
-  dataRetentionDays?: number; // Default 365
   database?: {
     path?: string; // Default './.digest/digest.db'
   };
+};
+
+export type TrackedRepository = {
+  name: string; // owner/repo format
+  addedAt: string; // ISO timestamp when added to tracking
+  lastSyncAt?: string; // ISO timestamp of last successful sync
+  syncSince?: string; // Historical sync start point (YYYY-MM-DD)
+  active: boolean; // Whether to include in sync operations
+  errors?: SyncError[]; // Recent sync errors
+};
+
+export type SyncError = {
+  timestamp: string; // ISO timestamp
+  error: string; // Error message
+  type: 'auth' | 'rate_limit' | 'network' | 'api' | 'unknown';
+};
+
+export type SyncState = {
+  repository: string;
+  lastSyncAt: string; // ISO timestamp of last successful sync
+  lastPRUpdated: string; // Latest PR updated_at from last sync
+  totalPRsSynced: number; // Running count for progress tracking
+  errors: SyncError[]; // Track sync issues
 };
 
 export type PRRecord = {

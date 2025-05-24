@@ -8,6 +8,11 @@ import type { DigestConfig, RawPR, RawReview, RawPRFile } from '../../types/inde
 
 export type GitHubClient = {
   /**
+   * Underlying Octokit instance for advanced usage
+   */
+  octokit: Octokit;
+  
+  /**
    * Test connection and authentication
    */
   testConnection(): Promise<{ success: boolean; user?: string; error?: string }>;
@@ -79,6 +84,8 @@ export const createGitHubClient = async (config?: DigestConfig): Promise<GitHubC
   });
   
   return {
+    octokit,
+    
     async testConnection() {
       try {
         const { data: user } = await octokit.rest.users.getAuthenticated();

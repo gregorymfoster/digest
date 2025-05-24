@@ -32,11 +32,18 @@ describe('Configuration', () => {
       const config = await loadConfig('test.config.json');
       
       expect(config).toEqual({
+        version: '1.0',
         github: { token: 'test-token' },
+        repositories: [],
+        settings: {
+          defaultTimeframe: '30d',
+          autoSync: false,
+          syncIntervalHours: 6,
+          dataRetentionDays: 365
+        },
         concurrency: 5,
         outputDir: './digest',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365,
         database: { path: './.digest/digest.db' }
       });
     });
@@ -86,14 +93,21 @@ describe('Configuration', () => {
       });
       
       expect(config).toEqual({
+        version: '1.0',
         github: {
           token: 'test-token',
           baseUrl: 'https://github.enterprise.com'
         },
+        repositories: [],
+        settings: {
+          defaultTimeframe: '30d',
+          autoSync: false,
+          syncIntervalHours: 6,
+          dataRetentionDays: 365
+        },
         concurrency: 15,
         outputDir: './custom-output',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365,
         database: { path: './.digest/digest.db' }
       });
     });
@@ -102,11 +116,18 @@ describe('Configuration', () => {
       const config = generateConfig({});
       
       expect(config).toEqual({
+        version: '1.0',
         github: {},
+        repositories: [],
+        settings: {
+          defaultTimeframe: '30d',
+          autoSync: false,
+          syncIntervalHours: 6,
+          dataRetentionDays: 365
+        },
         concurrency: 10,
         outputDir: './digest',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365,
         database: { path: './.digest/digest.db' }
       });
     });
@@ -120,6 +141,25 @@ describe('Configuration', () => {
         baseUrl: 'https://api.github.com'
       });
       expect(config.github).not.toHaveProperty('token');
+    });
+
+    it('should generate config with repositories', () => {
+      const config = generateConfig({
+        repositories: ['facebook/react', 'microsoft/typescript']
+      });
+      
+      expect(config.repositories).toHaveLength(2);
+      expect(config.repositories?.[0]).toMatchObject({
+        name: 'facebook/react',
+        active: true
+      });
+      expect(config.repositories?.[1]).toMatchObject({
+        name: 'microsoft/typescript', 
+        active: true
+      });
+      // Should have addedAt timestamps
+      expect(config.repositories?.[0].addedAt).toBeDefined();
+      expect(config.repositories?.[1].addedAt).toBeDefined();
     });
   });
 

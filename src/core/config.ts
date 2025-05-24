@@ -6,15 +6,37 @@ import { z } from 'zod';
 import { readFileSync, existsSync } from 'fs';
 import type { DigestConfig } from '../types/index.js';
 
+const SyncErrorSchema = z.object({
+  timestamp: z.string(),
+  error: z.string(),
+  type: z.enum(['auth', 'rate_limit', 'network', 'api', 'unknown'])
+});
+
+const TrackedRepositorySchema = z.object({
+  name: z.string(),
+  addedAt: z.string(),
+  lastSyncAt: z.string().optional(),
+  syncSince: z.string().optional(),
+  active: z.boolean(),
+  errors: z.array(SyncErrorSchema).optional()
+});
+
 const DigestConfigSchema = z.object({
+  version: z.string().optional(),
   github: z.object({
     token: z.string().optional(),
     baseUrl: z.string().url().optional()
   }).optional(),
+  repositories: z.array(TrackedRepositorySchema).optional(),
+  settings: z.object({
+    defaultTimeframe: z.string().optional(),
+    autoSync: z.boolean().optional(),
+    syncIntervalHours: z.number().min(1).max(168).optional(),
+    dataRetentionDays: z.number().min(1).max(3650).optional()
+  }).optional(),
   concurrency: z.number().min(1).max(50).optional(),
   outputDir: z.string().optional(),
   cacheDir: z.string().optional(),
-  dataRetentionDays: z.number().min(1).max(3650).optional(),
   database: z.object({
     path: z.string().optional()
   }).optional()
@@ -24,11 +46,18 @@ const DigestConfigSchema = z.object({
  * Default configuration values
  */
 export const DEFAULT_CONFIG: Required<DigestConfig> = {
+  version: '1.0',
   github: {},
+  repositories: [],
+  settings: {
+    defaultTimeframe: '30d',
+    autoSync: false,
+    syncIntervalHours: 6,
+    dataRetentionDays: 365
+  },
   concurrency: 10,
   outputDir: './digest',
   cacheDir: './.digest-cache',
-  dataRetentionDays: 365,
   database: {
     path: './.digest/digest.db'
   }
@@ -57,11 +86,13 @@ export const loadConfig = async (configPath?: string): Promise<DigestConfig> => 
     
     // Merge with defaults
     return {
+      version: validated.version ?? DEFAULT_CONFIG.version,
       github: { ...DEFAULT_CONFIG.github, ...validated.github },
+      repositories: validated.repositories ?? DEFAULT_CONFIG.repositories,
+      settings: { ...DEFAULT_CONFIG.settings, ...validated.settings },
       concurrency: validated.concurrency ?? DEFAULT_CONFIG.concurrency,
       outputDir: validated.outputDir ?? DEFAULT_CONFIG.outputDir,
       cacheDir: validated.cacheDir ?? DEFAULT_CONFIG.cacheDir,
-      dataRetentionDays: validated.dataRetentionDays ?? DEFAULT_CONFIG.dataRetentionDays,
       database: { ...DEFAULT_CONFIG.database, ...validated.database }
     };
   } catch (error) {
@@ -101,19 +132,28 @@ function findConfigFile(): string | null {
  */
 export const generateConfig = (options: {
   github?: { token?: string; baseUrl?: string };
+  repositories?: string[]; // List of owner/repo to track
   outputDir?: string;
   concurrency?: number;
   database?: { path?: string };
 }): DigestConfig => {
+  const now = new Date().toISOString();
+  
   return {
+    version: DEFAULT_CONFIG.version,
     github: {
       ...(options.github?.token && { token: options.github.token }),
       ...(options.github?.baseUrl && { baseUrl: options.github.baseUrl })
     },
+    repositories: options.repositories?.map(name => ({
+      name,
+      addedAt: now,
+      active: true
+    })) || [],
+    settings: DEFAULT_CONFIG.settings,
     concurrency: options.concurrency || DEFAULT_CONFIG.concurrency,
     outputDir: options.outputDir || DEFAULT_CONFIG.outputDir,
     cacheDir: DEFAULT_CONFIG.cacheDir,
-    dataRetentionDays: DEFAULT_CONFIG.dataRetentionDays,
     database: {
       path: options.database?.path || DEFAULT_CONFIG.database.path
     }
