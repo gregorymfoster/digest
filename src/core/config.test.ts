@@ -36,7 +36,8 @@ describe('Configuration', () => {
         concurrency: 5,
         outputDir: './digest',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365
+        dataRetentionDays: 365,
+        database: { path: './.digest/digest.db' }
       });
     });
 
@@ -92,7 +93,8 @@ describe('Configuration', () => {
         concurrency: 15,
         outputDir: './custom-output',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365
+        dataRetentionDays: 365,
+        database: { path: './.digest/digest.db' }
       });
     });
 
@@ -104,7 +106,8 @@ describe('Configuration', () => {
         concurrency: 10,
         outputDir: './digest',
         cacheDir: './.digest-cache',
-        dataRetentionDays: 365
+        dataRetentionDays: 365,
+        database: { path: './.digest/digest.db' }
       });
     });
 

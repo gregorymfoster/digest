@@ -14,7 +14,10 @@ const DigestConfigSchema = z.object({
   concurrency: z.number().min(1).max(50).optional(),
   outputDir: z.string().optional(),
   cacheDir: z.string().optional(),
-  dataRetentionDays: z.number().min(1).max(3650).optional()
+  dataRetentionDays: z.number().min(1).max(3650).optional(),
+  database: z.object({
+    path: z.string().optional()
+  }).optional()
 });
 
 /**
@@ -25,7 +28,10 @@ export const DEFAULT_CONFIG: Required<DigestConfig> = {
   concurrency: 10,
   outputDir: './digest',
   cacheDir: './.digest-cache',
-  dataRetentionDays: 365
+  dataRetentionDays: 365,
+  database: {
+    path: './.digest/digest.db'
+  }
 };
 
 /**
@@ -55,7 +61,8 @@ export const loadConfig = async (configPath?: string): Promise<DigestConfig> => 
       concurrency: validated.concurrency ?? DEFAULT_CONFIG.concurrency,
       outputDir: validated.outputDir ?? DEFAULT_CONFIG.outputDir,
       cacheDir: validated.cacheDir ?? DEFAULT_CONFIG.cacheDir,
-      dataRetentionDays: validated.dataRetentionDays ?? DEFAULT_CONFIG.dataRetentionDays
+      dataRetentionDays: validated.dataRetentionDays ?? DEFAULT_CONFIG.dataRetentionDays,
+      database: { ...DEFAULT_CONFIG.database, ...validated.database }
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -96,6 +103,7 @@ export const generateConfig = (options: {
   github?: { token?: string; baseUrl?: string };
   outputDir?: string;
   concurrency?: number;
+  database?: { path?: string };
 }): DigestConfig => {
   return {
     github: {
@@ -105,7 +113,10 @@ export const generateConfig = (options: {
     concurrency: options.concurrency || DEFAULT_CONFIG.concurrency,
     outputDir: options.outputDir || DEFAULT_CONFIG.outputDir,
     cacheDir: DEFAULT_CONFIG.cacheDir,
-    dataRetentionDays: DEFAULT_CONFIG.dataRetentionDays
+    dataRetentionDays: DEFAULT_CONFIG.dataRetentionDays,
+    database: {
+      path: options.database?.path || DEFAULT_CONFIG.database.path
+    }
   };
 };
 

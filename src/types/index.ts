@@ -15,6 +15,9 @@ export type DigestConfig = {
   outputDir?: string; // Default './digest'
   cacheDir?: string; // Default '~/.digest-cache'
   dataRetentionDays?: number; // Default 365
+  database?: {
+    path?: string; // Default './.digest/digest.db'
+  };
 };
 
 export type PRRecord = {
