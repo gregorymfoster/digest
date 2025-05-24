@@ -16,7 +16,7 @@ digest is a TypeScript CLI tool that provides management insights for software d
 
 ## Code Style Rules
 **See `STYLE_GUIDE.md` for complete development standards including:**
-- Naming conventions (kebab-case folders, camelCase files)
+- Naming conventions (kebab-case folders, snake_case files)
 - TypeScript standards and functional programming approach
 - Technology stack (tsup, vitest, oxlint)
 - Testing strategy with colocated tests

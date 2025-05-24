@@ -1,4 +1,4 @@
-export { PRSyncService } from './prSync.js';
-export { SyncOrchestrator } from './syncOrchestrator.js';
-export type { PRSyncOptions, PRSyncResult } from './prSync.js';
-export type { SyncAllOptions, SyncAllResult } from './syncOrchestrator.js';
+export { PRSyncService } from './pr_sync.js';
+export { SyncOrchestrator } from './sync_orchestrator.js';
+export type { PRSyncOptions, PRSyncResult } from './pr_sync.js';
+export type { SyncAllOptions, SyncAllResult } from './sync_orchestrator.js';

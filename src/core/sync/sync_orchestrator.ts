@@ -1,8 +1,8 @@
 import { WorkspaceManager } from '../workspace/index.js';
 import { createGitHubClient } from '../github/client.js';
 import { SqliteStore } from '../storage/index.js';
-import { PRSyncService } from './prSync.js';
-import type { PRSyncResult, PRSyncOptions } from './prSync.js';
+import { PRSyncService } from './pr_sync.js';
+import type { PRSyncResult, PRSyncOptions } from './pr_sync.js';
 import type { SyncProgress } from '../../types/index.js';
 import type { TrackedRepository } from '../../types/index.js';
 

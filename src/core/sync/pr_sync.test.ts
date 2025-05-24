@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { unlinkSync, existsSync } from 'fs';
-import { PRSyncService } from './prSync.js';
-import { SqliteStore } from '../storage/sqliteStore.js';
+import { PRSyncService } from './pr_sync.js';
+import { SqliteStore } from '../storage/sqlite_store.js';
 import type { Octokit } from '@octokit/rest';
 import type { RawPR, RawReview, RawPRFile } from '../../types/index.js';
 

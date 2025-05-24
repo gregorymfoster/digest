@@ -4,7 +4,7 @@
 
 ### Naming Conventions
 - **Folders**: kebab-case (e.g., `src/analytics/`, `src/github-client/`)
-- **Files**: camelCase (e.g., `metricsEngine.ts`, `githubClient.ts`)
+- **Files**: snake_case (e.g., `metrics_engine.ts`, `github_client.ts`)
 - **Variables/Functions**: camelCase (e.g., `computeMetrics`, `syncRepository`)
 - **Types**: PascalCase (e.g., `DeveloperMetrics`, `PRRecord`)
 - **Constants**: SCREAMING_SNAKE_CASE (e.g., `DEFAULT_TIMEFRAME`, `MAX_CONCURRENCY`)
@@ -35,15 +35,15 @@
 ```
 src/
 ├── analytics/
-│   ├── metricsEngine.ts
-│   ├── metricsEngine.test.ts
-│   ├── qualityScoring.ts
-│   └── qualityScoring.test.ts
+│   ├── metrics_engine.ts
+│   ├── metrics_engine.test.ts
+│   ├── quality_scoring.ts
+│   └── quality_scoring.test.ts
 ├── github-client/
-│   ├── githubSync.ts
-│   ├── githubSync.test.ts
-│   ├── rateLimiter.ts
-│   └── rateLimiter.test.ts
+│   ├── github_sync.ts
+│   ├── github_sync.test.ts
+│   ├── rate_limiter.ts
+│   └── rate_limiter.test.ts
 ```
 
 ## Technology Stack

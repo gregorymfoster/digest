@@ -1,4 +1,4 @@
-export { SqliteStore } from './sqliteStore.js';
+export { SqliteStore } from './sqlite_store.js';
 export type { 
   PullRequest, 
   Review, 

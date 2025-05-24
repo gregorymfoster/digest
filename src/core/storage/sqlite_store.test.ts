@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { unlinkSync, existsSync } from 'fs';
-import { SqliteStore } from './sqliteStore.js';
+import { SqliteStore } from './sqlite_store.js';
 import type { PullRequest, Review, Stats } from './types.js';
 
 describe('SqliteStore', () => {
