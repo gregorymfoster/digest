@@ -208,7 +208,7 @@ export class PRSyncService {
     const perPage = 100;
     let totalProcessed = 0;
 
-    console.log(`[${repository}] Fetching and processing PRs incrementally (last synced: #${lastSyncedPRNumber})`);
+    console.log(`[${repository}] Starting incremental sync (last synced: #${lastSyncedPRNumber})`);
 
     while (true) {
       const params: any = {
@@ -238,7 +238,11 @@ export class PRSyncService {
         break;
       }
 
-      console.log(`[${repository}] Page ${page}: Fetched ${prs.length} PRs, processing immediately...`);
+      // Track batch stats for cleaner logging
+      let batchProcessed = 0;
+      let batchSkipped = 0;
+      let batchErrors = 0;
+      const skippedReasons: Record<string, number> = {};
 
       // Process each PR immediately as we fetch it
       for (const pr of prs) {
@@ -251,8 +255,9 @@ export class PRSyncService {
               errors: [], lastSyncAt: new Date().toISOString() 
             });
             totalProcessed++;
-            console.log(`[${repository}] ✅ Processed PR #${pr.number} (${totalProcessed} total)`);
+            batchProcessed++;
           } catch (error) {
+            batchErrors++;
             console.error(`[${repository}] ❌ Error processing PR #${pr.number}: ${error}`);
           }
         } else {
@@ -277,15 +282,30 @@ export class PRSyncService {
                 errors: [], lastSyncAt: new Date().toISOString() 
               });
               totalProcessed++;
-              console.log(`[${repository}] ✅ Processed PR #${pr.number} (${decision.reason}) - ${totalProcessed} total`);
+              batchProcessed++;
             } catch (error) {
+              batchErrors++;
               console.error(`[${repository}] ❌ Error processing PR #${pr.number}: ${error}`);
             }
           } else {
-            console.log(`[${repository}] ⏭️  Skipping PR #${pr.number} (${decision.reason})`);
+            batchSkipped++;
+            skippedReasons[decision.reason] = (skippedReasons[decision.reason] || 0) + 1;
           }
         }
       }
+
+      // Log batch summary instead of individual PRs
+      const summaryParts = [];
+      if (batchProcessed > 0) summaryParts.push(`✅ ${batchProcessed} processed`);
+      if (batchSkipped > 0) {
+        const reasonSummary = Object.entries(skippedReasons)
+          .map(([reason, count]) => `${count} ${reason}`)
+          .join(', ');
+        summaryParts.push(`⏭️  ${batchSkipped} skipped (${reasonSummary})`);
+      }
+      if (batchErrors > 0) summaryParts.push(`❌ ${batchErrors} errors`);
+      
+      console.log(`[${repository}] Page ${page}: ${summaryParts.join(', ')} | Total processed: ${totalProcessed}`);
 
       // Calculate time estimates
       const timeElapsed = startTime ? Date.now() - startTime : 0;
@@ -329,7 +349,7 @@ export class PRSyncService {
       }
     }
 
-    console.log(`[${repository}] ✅ Fetch and process complete: ${totalProcessed} PRs processed`);
+    console.log(`[${repository}] ✅ Sync complete: ${totalProcessed} PRs processed`);
   }
 
   private async fetchAllRelevantPRs(
